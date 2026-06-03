@@ -5,4 +5,5 @@ using Test
     include("test_cpf.jl")
     include("test_profiles.jl")
     include("test_partition.jl")
+    include("test_crosssection.jl")
 end

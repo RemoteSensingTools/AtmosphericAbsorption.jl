@@ -33,6 +33,15 @@ intensities. Defined in terms of `Q(pf, T)`; backends may override for speed.
 @inline Q_ratio(pf::AbstractPartitionFunction, T, T_ref) = Q(pf, T_ref) / Q(pf, T)
 
 """
+    Q_ratio(pf, mol, iso, T, T_ref)
+
+Per-line ratio used in the pre-pass. The default ignores `(mol, iso)`; iso-aware
+backends (e.g. TIPS over a whole molecule) override this method.
+"""
+@inline Q_ratio(pf::AbstractPartitionFunction, mol::Integer, iso::Integer, T, T_ref) =
+    Q_ratio(pf, T, T_ref)
+
+"""
     TabulatedPF(T, Q)
 
 Partition sum from a tabulated `(T, Q)` grid, interpolated with a cubic spline.

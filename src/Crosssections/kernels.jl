@@ -1,0 +1,44 @@
+#=
+The single cross-section kernel. Each workitem owns one grid point, loops over the
+active lines whose wing window covers it, and accumulates `S · profile`. `profile`
+and `cpf` are singleton type parameters, so the compiler specializes this kernel per
+(profile, cpf) with no runtime dispatch — one source, every CPU/CUDA/Metal backend.
+=#
+
+@kernel function _crosssection_kernel!(A, @Const(grid), @Const(ν), @Const(γd), @Const(γl),
+                                       @Const(y), @Const(S), @Const(istart), @Const(istop),
+                                       N, profile, cpf)
+    I  = @index(Global, Linear)
+    FT = eltype(A)
+    νI = FT(grid[I])
+    acc = zero(FT)
+    @inbounds for j in 1:N
+        if istart[j] ≤ I ≤ istop[j]
+            acc += S[j] * evaluate(profile, cpf, νI - ν[j], γd[j], γl[j], y[j])
+        end
+    end
+    @inbounds A[I] += acc
+end
+
+"""
+    compute_cross_section(model, grid, pressure, temperature) -> Vector
+
+Absorption cross-section [cm²/molecule] on `grid` [cm⁻¹] at `pressure` [hPa] and
+`temperature` [K]. Result lives on the model's architecture (host `Array` for CPU).
+"""
+function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
+                               pressure::Real, temperature::Real) where {FT}
+    arch = model.architecture
+    Ng   = length(grid)
+    σ    = array_type(arch)(zeros(FT, Ng))
+    Ng == 0 && return σ
+    prep = prepare(model, grid, pressure, temperature)
+    if prep.n > 0
+        gridd  = array_type(arch)(collect(FT, grid))
+        kernel = _crosssection_kernel!(devi(arch))
+        kernel(σ, gridd, prep.ν, prep.γd, prep.γl, prep.y, prep.S,
+               prep.istart, prep.istop, Int32(prep.n), model.profile, model.cpf; ndrange = Ng)
+        synchronize_if_gpu(arch)
+    end
+    return σ
+end
