@@ -11,6 +11,7 @@ struct PreparedLines{V,VI}
     ν0::V; γd::V                     # line center, Doppler HWHM
     Γ0::V; Γ2::V; Δ0::V; Δ2::V       # width, speed-dep width, shift, speed-dep shift
     νVC::V; η::V                     # velocity-changing freq, correlation (HT)
+    Y::V                            # first-order (Rosenkranz) line-mixing coefficient
     S::V                            # T-corrected intensity
     istart::VI; istop::VI           # inclusive grid index window per line
     n::Int
@@ -39,7 +40,7 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
 
     ν0 = Vector{FT}(undef, n); γd = similar(ν0)
     Γ0 = similar(ν0); Γ2 = similar(ν0); Δ0 = similar(ν0); Δ2 = similar(ν0)
-    νVC = similar(ν0); η = similar(ν0); S = similar(ν0)
+    νVC = similar(ν0); η = similar(ν0); Y = similar(ν0); S = similar(ν0)
     istart = Vector{Int32}(undef, n); istop = similar(istart)
     Qcache = Dict{Tuple{Int32,Int32},FT}()   # partition ratio per (mol, iso)
     Ng = length(grid)
@@ -63,6 +64,7 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
         Γ2[k] = lines.γ2_air[j] * pratio * (Tref / T)^lines.n_γ2[j]        # advanced cols are
         Δ2[k] = lines.δ2_air[j] * pratio                                   # zero for Voigt lists
         νVC[k] = lines.νVC[j] * pratio;          η[k] = lines.η[j]
+        Y[k]  = lines.Y_LM[j] * pratio * (Tref / T)^lines.n_Y_LM[j]        # line mixing ∝ p
         νs = ν0j + Δ0j
         istart[k] = clamp(searchsortedfirst(grid, νs - wing_cutoff), 1, Ng)
         istop[k]  = clamp(searchsortedlast(grid, νs + wing_cutoff), 1, Ng)
@@ -70,5 +72,5 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
 
     to = array_type(architecture)
     return PreparedLines(to(ν0), to(γd), to(Γ0), to(Γ2), to(Δ0), to(Δ2),
-                         to(νVC), to(η), to(S), to(istart), to(istop), n)
+                         to(νVC), to(η), to(Y), to(S), to(istart), to(istop), n)
 end

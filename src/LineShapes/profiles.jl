@@ -35,12 +35,22 @@ struct HartmannTran <: AbstractLineProfile end
     FT(SQRT_LN2_OVER_SQRT_PI) / γd * real(w(cpf, FT(SQRT_LN2) / γd * Δν + im * y))
 
 # Uniform per-line entry point: `νI` is the grid wavenumber, `ν0` the line center, and
-# `p` a NamedTuple of prepared parameters (γd, Γ0, Γ2, Δ0, Δ2, νVC, η). Each profile reads
+# `p` a NamedTuple of prepared parameters (γd, Γ0, Γ2, Δ0, Δ2, νVC, η, Y). Each profile reads
 # only what it needs; the cross-section kernel calls the same signature for every profile,
-# specialized at compile time on the profile type. Δ0 is the pressure shift.
+# specialized at compile time on the profile type. Δ0 is the pressure shift; `Y` is the
+# first-order (Rosenkranz) line-mixing coefficient — it adds the asymmetric `Y·Im` term to
+# the collisional profiles and is zero for lists without mixing. Doppler is the zero-
+# pressure limit, where mixing vanishes, so it ignores `Y`.
 @inline evaluate(::Doppler, ::AbstractCPF, νI::FT, ν0::FT, p) where {FT} =
     doppler(νI - (ν0 + p.Δ0), p.γd)
-@inline evaluate(::Lorentz, ::AbstractCPF, νI::FT, ν0::FT, p) where {FT} =
-    lorentz(νI - (ν0 + p.Δ0), p.Γ0)
-@inline evaluate(::Voigt, cpf::AbstractCPF, νI::FT, ν0::FT, p) where {FT} =
-    voigt(cpf, νI - (ν0 + p.Δ0), p.γd, FT(SQRT_LN2) * p.Γ0 / p.γd)
+
+@inline function evaluate(::Lorentz, ::AbstractCPF, νI::FT, ν0::FT, p) where {FT}
+    Δν = νI - (ν0 + p.Δ0)
+    return (p.Γ0 + p.Y * Δν) / (FT(π) * (p.Γ0^2 + Δν^2))      # Im part of the complex Lorentzian
+end
+
+@inline function evaluate(::Voigt, cpf::AbstractCPF, νI::FT, ν0::FT, p) where {FT}
+    Δν = νI - (ν0 + p.Δ0)
+    W  = w(cpf, FT(SQRT_LN2) / p.γd * Δν + im * (FT(SQRT_LN2) * p.Γ0 / p.γd))
+    return FT(SQRT_LN2_OVER_SQRT_PI) / p.γd * (real(W) + p.Y * imag(W))
+end

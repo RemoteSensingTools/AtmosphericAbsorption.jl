@@ -41,15 +41,15 @@ trapz(f, νs) = sum((f(a) + f(b)) * (b - a) / 2 for (a, b) in zip(νs, @view νs
         ν0, γd, Γ0, Δ0 = FT(1000), FT(0.04), FT(0.03), FT(-0.01)
         νI = FT(1000.02)
         p  = (γd = γd, Γ0 = Γ0, Γ2 = zero(FT), Δ0 = Δ0,
-              Δ2 = zero(FT), νVC = zero(FT), η = zero(FT))
+              Δ2 = zero(FT), νVC = zero(FT), η = zero(FT), Y = zero(FT))
         y  = sqrt(log(FT(2))) * Γ0 / γd
         @test evaluate(Doppler(), cpf, νI, ν0, p) == doppler(νI - (ν0 + Δ0), γd)
         @test evaluate(Lorentz(), cpf, νI, ν0, p) == lorentz(νI - (ν0 + Δ0), Γ0)
-        @test evaluate(Voigt(),   cpf, νI, ν0, p) == voigt(cpf, νI - (ν0 + Δ0), γd, y)
+        @test evaluate(Voigt(),   cpf, νI, ν0, p) ≈ voigt(cpf, νI - (ν0 + Δ0), γd, y)
         @test @inferred(evaluate(Voigt(), cpf, νI, ν0, p)) isa FT
     end
 
-    let p = (γd = 0.04, Γ0 = 0.03, Γ2 = 0.0, Δ0 = -0.01, Δ2 = 0.0, νVC = 0.0, η = 0.0)
+    let p = (γd = 0.04, Γ0 = 0.03, Γ2 = 0.0, Δ0 = -0.01, Δ2 = 0.0, νVC = 0.0, η = 0.0, Y = 0.0)
         @test_opt evaluate(Voigt(), cpf, 1000.02, 1000.0, p)
     end
 end

@@ -27,6 +27,36 @@ htpf(::Type{FT}) where {FT} = TabulatedPF(FT[150, 296, 400], FT[1, 1, 1])  # fla
         @test isapprox(σ, ref; rtol = FT === Float64 ? 1e-10 : 1e-4)
     end
 
+    @testset "line mixing folds in through the kernel ($FT)" for FT in (Float32, Float64)
+        db = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = FT[1000], S = FT[1e-21],
+                          E_lower = FT[0], g_upper = FT[1], γ_air = FT[0.03], γ_self = FT[0],
+                          n_air = FT[0], δ_air = FT[-0.01], molar_mass = FT[44],
+                          γ2_air = FT[0.006], δ2_air = FT[0.002], νVC = FT[0.012], η = FT[0.3],
+                          Y_LM = FT[0.4], meta = SourceMetadata("synthetic", 296.0, 1013.25))
+        cpf = HumlicekWeideman32()
+        model = LineByLineModel(db, htpf(FT); profile = HartmannTran(), cpf, wing_cutoff = FT(40))
+        grid = collect(FT, 999:FT(0.01):1001)
+        σ = compute_cross_section(model, grid, 1013.25, 296.0)   # Y = Y_LM at p_ref, T_ref
+        γd = γd_of(FT, 1000, 44, 296)
+        ref = [let LS = pcqsdhc(cpf, FT(1000), γd, FT(0.03), FT(0.006), FT(-0.01),
+                                FT(0.002), FT(0.012), FT(0.3), νi)
+                   FT(1e-21) * (real(LS) + FT(0.4) * imag(LS))
+               end for νi in grid]
+        @test isapprox(σ, ref; rtol = FT === Float64 ? 1e-10 : 1e-4)
+    end
+
+    @testset "Voigt+mixing == HartmannTran+mixing when advanced cols are zero ($FT)" for FT in (Float32, Float64)
+        # With only Y_LM set, the fast Voigt path and the pcqsdhc (HT) path must agree.
+        db = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = FT[1000], S = FT[1e-21],
+                          E_lower = FT[0], g_upper = FT[1], γ_air = FT[0.05], γ_self = FT[0],
+                          n_air = FT[0.7], δ_air = FT[-0.01], molar_mass = FT[44],
+                          Y_LM = FT[0.35], meta = SourceMetadata("synthetic", 296.0, 1013.25))
+        grid = collect(FT, 999:FT(0.01):1001)
+        vo = compute_cross_section(LineByLineModel(db, htpf(FT); profile = Voigt(), wing_cutoff = FT(40)), grid, 800.0, 250.0)
+        ht = compute_cross_section(LineByLineModel(db, htpf(FT); profile = HartmannTran(), wing_cutoff = FT(40)), grid, 800.0, 250.0)
+        @test isapprox(vo, ht; rtol = FT === Float64 ? 1e-6 : 5e-4)
+    end
+
     @testset "HartmannTran reduces to Voigt when advanced cols are zero ($FT)" for FT in (Float32, Float64)
         db = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = FT[1000], S = FT[1e-21],
                           E_lower = FT[0], g_upper = FT[1], γ_air = FT[0.05], γ_self = FT[0],

@@ -7,7 +7,7 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
 
 @kernel function _crosssection_kernel!(A, @Const(grid), @Const(ν0), @Const(γd), @Const(Γ0),
                                        @Const(Γ2), @Const(Δ0), @Const(Δ2), @Const(νVC),
-                                       @Const(η), @Const(S), @Const(istart), @Const(istop),
+                                       @Const(η), @Const(Y), @Const(S), @Const(istart), @Const(istop),
                                        N, profile, cpf)
     I  = @index(Global, Linear)
     FT = eltype(A)
@@ -16,7 +16,7 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
     @inbounds for j in 1:N
         if istart[j] ≤ I ≤ istop[j]
             p = (γd = γd[j], Γ0 = Γ0[j], Γ2 = Γ2[j], Δ0 = Δ0[j],
-                 Δ2 = Δ2[j], νVC = νVC[j], η = η[j])
+                 Δ2 = Δ2[j], νVC = νVC[j], η = η[j], Y = Y[j])
             acc += S[j] * evaluate(profile, cpf, νI, ν0[j], p)
         end
     end
@@ -40,7 +40,7 @@ function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
         gridd  = array_type(arch)(collect(FT, grid))
         kernel = _crosssection_kernel!(devi(arch))
         kernel(σ, gridd, prep.ν0, prep.γd, prep.Γ0, prep.Γ2, prep.Δ0, prep.Δ2,
-               prep.νVC, prep.η, prep.S, prep.istart, prep.istop,
+               prep.νVC, prep.η, prep.Y, prep.S, prep.istart, prep.istop,
                Int32(prep.n), model.profile, model.cpf; ndrange = Ng)
         synchronize_if_gpu(arch)
     end

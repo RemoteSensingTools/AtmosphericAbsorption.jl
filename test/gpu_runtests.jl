@@ -38,7 +38,7 @@ end
                           γ_air = FT[0.08, 0.08], γ_self = FT[0, 0], n_air = FT[0.7, 0.7],
                           δ_air = FT[-0.005, -0.005], molar_mass = FT[44, 44],
                           γ2_air = FT[0.01, 0.008], δ2_air = FT[0.003, 0.002],
-                          νVC = FT[0.015, 0.012], η = FT[0.3, 0.25],
+                          νVC = FT[0.015, 0.012], η = FT[0.3, 0.25], Y_LM = FT[0.3, 0.2],
                           meta = SourceMetadata("synthetic", 296.0, 1013.25))
         pf = TabulatedPF(FT[150, 296, 400], FT[280, 300, 330])
         grid = collect(FT, 998:FT(0.01):1002)
