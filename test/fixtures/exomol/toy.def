@@ -1,0 +1,5 @@
+EXOMOL.def                  # ID
+28.0  9.3e-26               # Isotopologue mass (Da) and (kg)
+4                           # No. of states in .states file
+0.0700                      # Default value of Lorentzian half-width for all lines (cm-1/bar)
+0.500                       # Default value of temperature exponent for all lines
