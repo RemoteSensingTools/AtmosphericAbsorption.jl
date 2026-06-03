@@ -20,6 +20,13 @@ const GOLDEN_CASES = [
     @test (f('1'), f('9'), f('0'), f('A'), f('B')) == (1, 9, 10, 11, 12)
 end
 
+@testset "HITRAN API key management" begin
+    activate_hitran!("test-dummy-key")          # never a real key in tests
+    @test AtmosphericAbsorption.LineLists.has_hitran_api_key()
+    @test AtmosphericAbsorption.LineLists.hitran_api_key() == "test-dummy-key"
+    AtmosphericAbsorption.LineLists._HITRAN_API_KEY[] = nothing   # reset session key
+end
+
 # HAPI-style direct download from hitran.org — network-gated (skipped, not failed, offline).
 @testset "HITRAN direct download (network)" begin
     db = try

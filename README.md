@@ -25,6 +25,17 @@ Early development, built in phases:
 - Phase 2 — advanced shapes (HT/SDV); Phase 3 — ExoMol; Phase 4 — line mixing +
   continuum; Phase 5 — vSmartMOM integration.
 
+## HITRAN API key (for non-Voigt parameters)
+
+Standard HITRAN line data and ExoMol downloads need **no credentials**. Fetching HITRAN
+**non-Voigt** parameters (Hartmann-Tran / speed-dependent / line-mixing) uses the
+authenticated HITRANonline API and requires your own key from your profile at
+<https://hitran.org>. Supply it in-memory (never stored on disk or in this repo):
+
+```julia
+activate_hitran!("your-key")          # or set the HITRAN_API_KEY environment variable
+```
+
 ## Develop
 
 ```julia
