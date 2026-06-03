@@ -20,6 +20,22 @@ const GOLDEN_CASES = [
     @test (f('1'), f('9'), f('0'), f('A'), f('B')) == (1, 9, 10, 11, 12)
 end
 
+# HAPI-style direct download from hitran.org — network-gated (skipped, not failed, offline).
+@testset "HITRAN direct download (network)" begin
+    db = try
+        load_lines(HitranPort(; molecule = "CO", numin = 2100.0, numax = 2200.0);
+                   mol = 5, iso = 1, min_strength = 1e-25)
+    catch e
+        @info "HITRAN download failed (offline?) — skipping" exception = (e, catch_backtrace())
+        nothing
+    end
+    if db !== nothing
+        @test length(db) > 40
+        @test all(2100 .≤ db.ν0 .≤ 2200)
+        @test issorted(db.ν0)
+    end
+end
+
 @testset "HITRAN cross-section vs HAPI golden" begin
     @testset "$name" for (name, mol, iso, p, T, wing) in GOLDEN_CASES
         d = readdlm(joinpath(GOLDEN, name * ".txt"), comments = true, comment_char = '#')

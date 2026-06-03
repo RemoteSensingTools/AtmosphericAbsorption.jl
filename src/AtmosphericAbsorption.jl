@@ -31,7 +31,7 @@ export AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt, Hartma
 export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, Q, Q_ratio
 # Line lists
 export AbstractLineListPort, LineDatabase, SourceMetadata,
-       load_lines, partition_function, source_metadata, HitranPort, ExoMolPort
+       load_lines, partition_function, source_metadata, HitranPort, ExoMolPort, fetch_hitran
 # Cross-section compute core
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section
 
