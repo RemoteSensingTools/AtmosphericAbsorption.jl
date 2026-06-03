@@ -32,7 +32,7 @@ export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, Q, Q_ratio
 # Line lists
 export AbstractLineListPort, LineDatabase, SourceMetadata,
        load_lines, partition_function, source_metadata, HitranPort, ExoMolPort,
-       fetch_hitran, activate_hitran!
+       fetch_hitran, activate_hitran!, fetch_hitran_nonvoigt, load_hitran_nonvoigt
 # Cross-section compute core
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section
 

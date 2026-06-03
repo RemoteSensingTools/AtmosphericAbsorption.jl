@@ -43,6 +43,28 @@ end
     end
 end
 
+# Authenticated non-Voigt (HT/SDV) fetch — gated on BOTH an API key and network.
+@testset "HITRAN non-Voigt (HT/SDV) fetch" begin
+    if !AtmosphericAbsorption.LineLists.has_hitran_api_key()
+        @info "No HITRAN API key (activate_hitran!/HITRAN_API_KEY) — skipping non-Voigt test"
+    else
+        db = try
+            load_hitran_nonvoigt("H2O"; numin = 3700.0, numax = 3850.0, min_strength = 1e-25)
+        catch e
+            @info "HITRAN non-Voigt fetch failed — skipping" exception = (e, catch_backtrace())
+            nothing
+        end
+        if db !== nothing
+            @test count(!iszero, db.γ2_air) > 100        # ~336 H2O HT lines in this band
+            grid = collect(3700.0:0.05:3850.0)
+            σsdv = compute_cross_section(LineByLineModel(db, TIPS2017PF(); profile = SpeedDependentVoigt(), wing_cutoff = 40.0), grid, 500.0, 250.0)
+            σvgt = compute_cross_section(LineByLineModel(db, TIPS2017PF(); profile = Voigt(), wing_cutoff = 40.0), grid, 500.0, 250.0)
+            @test all(isfinite, σsdv) && maximum(σsdv) > 0
+            @test maximum(abs.(σsdv .- σvgt)) / maximum(σvgt) > 1e-3   # HT params change the shape
+        end
+    end
+end
+
 @testset "HITRAN cross-section vs HAPI golden" begin
     @testset "$name" for (name, mol, iso, p, T, wing) in GOLDEN_CASES
         d = readdlm(joinpath(GOLDEN, name * ".txt"), comments = true, comment_char = '#')

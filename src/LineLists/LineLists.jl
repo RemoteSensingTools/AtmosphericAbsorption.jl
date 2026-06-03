@@ -18,7 +18,8 @@ using ..PartitionFunctions: TIPS2017PF, TabulatedPF
 
 export AbstractLineListPort, LineDatabase, SourceMetadata,
        load_lines, partition_function, source_metadata,
-       HitranPort, ExoMolPort, fetch_hitran, activate_hitran!
+       HitranPort, ExoMolPort, fetch_hitran, activate_hitran!,
+       fetch_hitran_nonvoigt, load_hitran_nonvoigt
 
 include("columnar.jl")
 include("interface.jl")
@@ -27,6 +28,7 @@ include("ports/hitran/par_parser.jl")
 include("ports/hitran/HitranPort.jl")
 include("ports/hitran/auth.jl")
 include("ports/hitran/download.jl")
+include("ports/hitran/nonvoigt.jl")
 include("ports/exomol/io.jl")
 include("ports/exomol/ExoMolPort.jl")
 
