@@ -1,0 +1,16 @@
+# Physical constants and reference state for line-by-line absorption.
+# Single editable source of truth — Constants.jl binds these to type-stable globals.
+# Values are CODATA-2018.
+
+[physical]
+c2_radiation = 1.4387768775039337   # second radiation constant hc/k_B [cm·K]
+k_boltzmann  = 1.380649e-23         # Boltzmann constant [J/K]
+c_light      = 2.99792458e8         # speed of light [m/s]
+amu          = 1.66053906660e-27    # atomic mass unit [kg]
+
+[reference]
+pressure    = 1013.25   # reference pressure [hPa]
+temperature = 296.0     # reference temperature [K]
+
+[conversion]
+nm_per_m = 1.0e7        # wavelength[nm] = nm_per_m / wavenumber[cm⁻¹]

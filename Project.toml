@@ -4,19 +4,26 @@ authors = ["Christian Frankenberg <cfranken@caltech.edu> and contributors"]
 version = "0.1.0-DEV"
 
 [deps]
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 DataInterpolations = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
+Arrow = "2"
 DataInterpolations = "6, 7, 8"
 KernelAbstractions = "0.9"
+Scratch = "1"
 SpecialFunctions = "2"
+TOML = "1"
 julia = "1.9"
 
 [extras]
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "JET"]
+test = ["Test", "JET", "DelimitedFiles"]

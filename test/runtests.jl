@@ -6,4 +6,5 @@ using Test
     include("test_profiles.jl")
     include("test_partition.jl")
     include("test_crosssection.jl")
+    include("test_hitran_golden.jl")
 end

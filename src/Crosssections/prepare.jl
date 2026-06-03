@@ -25,17 +25,18 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
 
     # Select on the shifted center νs = ν₀ + pratio·δ_air. We pad the ν₀ band by the
     # largest possible shift so no edge line that shifts into the window is dropped;
-    # the exact per-line window (istart/istop) is computed from νs below.
+    # the exact per-line window (istart/istop) is computed from νs below. `ν0` is sorted
+    # (LineDatabase contract), so the band is found with two binary searches.
     δmax = isempty(lines.δ_air) ? zero(FT) : abs(pratio) * maximum(abs, lines.δ_air)
     νmin = FT(first(grid)) - wing_cutoff - δmax
     νmax = FT(last(grid)) + wing_cutoff + δmax
-    active = findall(ν0 -> νmin ≤ ν0 ≤ νmax, lines.ν0)
+    active = searchsortedfirst(lines.ν0, νmin):searchsortedlast(lines.ν0, νmax)
     n = length(active)
 
     ν  = Vector{FT}(undef, n); γd = similar(ν); γl = similar(ν)
     y  = similar(ν);           S  = similar(ν)
     istart = Vector{Int32}(undef, n); istop = similar(istart)
-    Qcache = Dict{Tuple{Int,Int},FT}()
+    Qcache = Dict{Tuple{Int32,Int32},FT}()   # partition ratio per (mol, iso)
     Ng = length(grid)
 
     @inbounds for (k, j) in enumerate(active)
@@ -44,10 +45,10 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
         γl_j = (lines.γ_air[j] * (1 - vmr) + lines.γ_self[j] * vmr) *
                pratio * (Tref / T)^lines.n_air[j]
         γd_j = ν0 * dopp / sqrt(lines.molar_mass[j])
-        key  = (Int(lines.mol[j]), Int(lines.iso[j]))
-        Qr   = get(Qcache, key, zero(FT))
-        if Qr == 0
-            Qr = FT(Q_ratio(partition, lines.mol[j], lines.iso[j], T, Tref))
+        key = (lines.mol[j], lines.iso[j])
+        Qr  = get(Qcache, key, FT(NaN))             # NaN sentinel: never a valid ratio
+        if isnan(Qr)
+            Qr = FT(Q_ratio(partition, key[1], key[2], T, Tref))
             Qcache[key] = Qr
         end
         S_j = lines.S[j] * Qr * exp(c₂ * lines.E_lower[j] * (1 / Tref - 1 / T)) *

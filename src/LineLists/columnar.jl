@@ -10,7 +10,7 @@ struct SourceMetadata
 end
 
 """
-    LineDatabase{FT,VI}
+    LineDatabase{FT}
 
 Struct-of-arrays line list holding the union of parameters every profile needs.
 Core Voigt columns are always present; advanced columns (speed-dependence, velocity
