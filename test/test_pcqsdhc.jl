@@ -1,0 +1,41 @@
+using AtmosphericAbsorption.LineShapes: pcqsdhc, voigt, HumlicekWeideman32, ErfcxCPF
+using DelimitedFiles: readdlm
+using JET
+
+const GOLDEN = joinpath(@__DIR__, "golden")
+
+# name => (Γ0, Γ2, Δ0, Δ2, νVC, η); goldens from generate_pcqsdhc_golden.py (HAPI).
+const PCQSDHC_CASES = Dict(
+    "voigt" => (0.03, 0.0, -0.01, 0.0, 0.0, 0.0),
+    "sdv"   => (0.03, 0.006, -0.01, 0.002, 0.0, 0.0),
+    "ht"    => (0.03, 0.006, -0.01, 0.002, 0.012, 0.3),
+)
+
+@testset "pcqsdhc (HT/SDV) vs HAPI golden" begin
+    ν0, γd = 1000.0, 0.02
+    @testset "$name ($FT)" for name in keys(PCQSDHC_CASES), FT in (Float32, Float64)
+        Γ0, Γ2, Δ0, Δ2, νVC, η = PCQSDHC_CASES[name]
+        d = readdlm(joinpath(GOLDEN, "pcqsdhc_$(name).txt"), comments = true, comment_char = '#')
+        ν, re_ref = d[:, 1], d[:, 2]
+        re = [real(pcqsdhc(HumlicekWeideman32(), FT(ν0), FT(γd), FT(Γ0), FT(Γ2),
+                           FT(Δ0), FT(Δ2), FT(νVC), FT(η), FT(νi))) for νi in ν]
+        rel = maximum(abs.(re .- re_ref)) / maximum(abs.(re_ref))
+        @test rel < (FT === Float64 ? 1e-4 : 1e-3)
+    end
+
+    @testset "HT reduces to Voigt when Γ2=Δ2=νVC=η=0 ($FT)" for FT in (Float32, Float64)
+        γd, Γ0 = FT(0.02), FT(0.03)
+        y = sqrt(log(FT(2))) * Γ0 / γd
+        cpf = ErfcxCPF()
+        for νi in FT.(999.6:0.01:1000.4)
+            ht = real(pcqsdhc(cpf, FT(1000), γd, Γ0, FT(0), FT(0), FT(0), FT(0), FT(0), νi))
+            @test isapprox(ht, voigt(cpf, νi - FT(1000), γd, y); rtol = FT(1e-5))
+        end
+    end
+
+    @testset "type stability ($FT)" for FT in (Float32, Float64)
+        z = @inferred pcqsdhc(HumlicekWeideman32(), FT(1000), FT(0.02), FT(0.03),
+                              FT(0.006), FT(-0.01), FT(0.002), FT(0.012), FT(0.3), FT(1000.1))
+        @test z isa Complex{FT}
+    end
+end

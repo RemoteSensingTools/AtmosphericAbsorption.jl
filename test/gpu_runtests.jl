@@ -8,6 +8,7 @@ Asserts the cross-section kernel on the GPU matches the CPU result to (near) mac
 precision in the backend's working precision.
 =#
 using AtmosphericAbsorption
+using AtmosphericAbsorption: SpeedDependentVoigt, HartmannTran
 using AtmosphericAbsorption.Architectures: GPU, MetalGPU, CPU
 using Test
 
@@ -36,10 +37,12 @@ end
                           S = FT[1e-21, 2e-21], E_lower = FT[120, 250], g_upper = FT[1, 1],
                           γ_air = FT[0.08, 0.08], γ_self = FT[0, 0], n_air = FT[0.7, 0.7],
                           δ_air = FT[-0.005, -0.005], molar_mass = FT[44, 44],
+                          γ2_air = FT[0.01, 0.008], δ2_air = FT[0.003, 0.002],
+                          νVC = FT[0.015, 0.012], η = FT[0.3, 0.25],
                           meta = SourceMetadata("synthetic", 296.0, 1013.25))
         pf = TabulatedPF(FT[150, 296, 400], FT[280, 300, 330])
         grid = collect(FT, 998:FT(0.01):1002)
-        for profile in (Voigt(), Lorentz(), Doppler())
+        for profile in (Voigt(), Lorentz(), Doppler(), SpeedDependentVoigt(), HartmannTran())
             cpu = LineByLineModel(db, pf; profile, wing_cutoff = FT(40), architecture = CPU())
             gpu = LineByLineModel(db, pf; profile, wing_cutoff = FT(40), architecture = arch)
             σc = compute_cross_section(cpu, grid, 700.0, 260.0)

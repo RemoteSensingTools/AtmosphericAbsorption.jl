@@ -24,9 +24,9 @@ using .Crosssections
 
 # Compute backends
 export AbstractArchitecture, CPU, GPU, MetalGPU, default_architecture, array_type
-# Line-shape math
-export AbstractLineProfile, Doppler, Lorentz, Voigt,
-       AbstractCPF, HumlicekWeideman32, ErfcxCPF, w, evaluate
+# Line-shape math (evaluate is an internal kernel helper — not exported)
+export AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt, HartmannTran,
+       AbstractCPF, HumlicekWeideman32, ErfcxCPF, w, pcqsdhc
 # Partition functions
 export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, Q, Q_ratio
 # Line lists

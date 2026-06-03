@@ -1,5 +1,6 @@
 using AtmosphericAbsorption: Doppler, Lorentz, Voigt, HumlicekWeideman32, ErfcxCPF,
-                             doppler, lorentz, voigt, evaluate
+                             doppler, lorentz, voigt
+using AtmosphericAbsorption.LineShapes: evaluate   # internal kernel dispatch helper
 using JET
 
 # Trapezoidal integral of a profile over a symmetric grid — used for ∫ϕ dν ≈ 1.
@@ -37,13 +38,18 @@ trapz(f, νs) = sum((f(a) + f(b)) * (b - a) / 2 for (a, b) in zip(νs, @view νs
     end
 
     @testset "evaluate dispatches to the right profile ($FT)" for FT in (Float32, Float64)
-        Δν, γd, γl = FT(0.01), FT(0.04), FT(0.03)
-        y = sqrt(log(FT(2))) * γl / γd
-        @test evaluate(Doppler(), cpf, Δν, γd, γl, y) == doppler(Δν, γd)
-        @test evaluate(Lorentz(), cpf, Δν, γd, γl, y) == lorentz(Δν, γl)
-        @test evaluate(Voigt(),   cpf, Δν, γd, γl, y) == voigt(cpf, Δν, γd, y)
-        @test @inferred(evaluate(Voigt(), cpf, Δν, γd, γl, y)) isa FT
+        ν0, γd, Γ0, Δ0 = FT(1000), FT(0.04), FT(0.03), FT(-0.01)
+        νI = FT(1000.02)
+        p  = (γd = γd, Γ0 = Γ0, Γ2 = zero(FT), Δ0 = Δ0,
+              Δ2 = zero(FT), νVC = zero(FT), η = zero(FT))
+        y  = sqrt(log(FT(2))) * Γ0 / γd
+        @test evaluate(Doppler(), cpf, νI, ν0, p) == doppler(νI - (ν0 + Δ0), γd)
+        @test evaluate(Lorentz(), cpf, νI, ν0, p) == lorentz(νI - (ν0 + Δ0), Γ0)
+        @test evaluate(Voigt(),   cpf, νI, ν0, p) == voigt(cpf, νI - (ν0 + Δ0), γd, y)
+        @test @inferred(evaluate(Voigt(), cpf, νI, ν0, p)) isa FT
     end
 
-    @test_opt evaluate(Voigt(), cpf, 0.01, 0.04, 0.03, 0.6)
+    let p = (γd = 0.04, Γ0 = 0.03, Γ2 = 0.0, Δ0 = -0.01, Δ2 = 0.0, νVC = 0.0, η = 0.0)
+        @test_opt evaluate(Voigt(), cpf, 1000.02, 1000.0, p)
+    end
 end

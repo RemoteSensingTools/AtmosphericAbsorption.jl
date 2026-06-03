@@ -10,11 +10,14 @@ module LineShapes
 using SpecialFunctions: erfcx
 using ..Constants
 
+# `evaluate` is the kernel's internal per-line dispatch entry point — intentionally
+# NOT exported; the public line-shape API is the bare profile functions below.
 export AbstractCPF, HumlicekWeideman32, ErfcxCPF, w,
-       AbstractLineProfile, Doppler, Lorentz, Voigt,
-       doppler, lorentz, voigt, evaluate
+       AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt, HartmannTran,
+       doppler, lorentz, voigt, pcqsdhc
 
 include("cpf.jl")
 include("profiles.jl")
+include("pcqsdhc.jl")
 
 end # module

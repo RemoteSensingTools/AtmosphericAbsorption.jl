@@ -11,7 +11,7 @@ module Constants
 
 using TOML
 
-export LN2, SQRT_LN2, SQRT_LN2_OVER_SQRT_PI, SQRT_2LN2,
+export LN2, SQRT_LN2, SQRT_LN2_OVER_SQRT_PI, SQRT_2LN2, SQRT_PI,
        C2_RAD, K_BOLTZMANN, C_LIGHT, AMU, P_REF, T_REF, NM_PER_M
 
 const _TOML_PATH = joinpath(@__DIR__, "constants.toml")
@@ -43,5 +43,7 @@ const SQRT_LN2              = sqrt(LN2)
 const SQRT_2LN2             = sqrt(2 * LN2)
 "√ln2 / √π — the Doppler/Voigt area normalization."
 const SQRT_LN2_OVER_SQRT_PI = SQRT_LN2 / sqrt(π)
+"√π."
+const SQRT_PI               = sqrt(π)
 
 end # module

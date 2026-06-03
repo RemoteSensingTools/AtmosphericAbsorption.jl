@@ -5,8 +5,9 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
 (profile, cpf) with no runtime dispatch — one source, every CPU/CUDA/Metal backend.
 =#
 
-@kernel function _crosssection_kernel!(A, @Const(grid), @Const(ν), @Const(γd), @Const(γl),
-                                       @Const(y), @Const(S), @Const(istart), @Const(istop),
+@kernel function _crosssection_kernel!(A, @Const(grid), @Const(ν0), @Const(γd), @Const(Γ0),
+                                       @Const(Γ2), @Const(Δ0), @Const(Δ2), @Const(νVC),
+                                       @Const(η), @Const(S), @Const(istart), @Const(istop),
                                        N, profile, cpf)
     I  = @index(Global, Linear)
     FT = eltype(A)
@@ -14,7 +15,9 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
     acc = zero(FT)
     @inbounds for j in 1:N
         if istart[j] ≤ I ≤ istop[j]
-            acc += S[j] * evaluate(profile, cpf, νI - ν[j], γd[j], γl[j], y[j])
+            p = (γd = γd[j], Γ0 = Γ0[j], Γ2 = Γ2[j], Δ0 = Δ0[j],
+                 Δ2 = Δ2[j], νVC = νVC[j], η = η[j])
+            acc += S[j] * evaluate(profile, cpf, νI, ν0[j], p)
         end
     end
     @inbounds A[I] += acc
@@ -36,8 +39,9 @@ function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
     if prep.n > 0
         gridd  = array_type(arch)(collect(FT, grid))
         kernel = _crosssection_kernel!(devi(arch))
-        kernel(σ, gridd, prep.ν, prep.γd, prep.γl, prep.y, prep.S,
-               prep.istart, prep.istop, Int32(prep.n), model.profile, model.cpf; ndrange = Ng)
+        kernel(σ, gridd, prep.ν0, prep.γd, prep.Γ0, prep.Γ2, prep.Δ0, prep.Δ2,
+               prep.νVC, prep.η, prep.S, prep.istart, prep.istop,
+               Int32(prep.n), model.profile, model.cpf; ndrange = Ng)
         synchronize_if_gpu(arch)
     end
     return σ
