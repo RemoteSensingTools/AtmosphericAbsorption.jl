@@ -1,6 +1,8 @@
+using AtmosphericAbsorption
 using AtmosphericAbsorption: TabulatedPF, Q_ratio
 import AtmosphericAbsorption: Q_ratio as Q_ratio_ext
 using AtmosphericAbsorption.PartitionFunctions: AbstractPartitionFunction
+using Test
 
 # Stub iso-aware backend to confirm the 5-arg Q_ratio dispatch reaches an override.
 struct StubISOPF <: AbstractPartitionFunction end
@@ -18,4 +20,25 @@ Q_ratio_ext(::StubISOPF, mol::Integer, iso::Integer, T, T_ref) = float(iso)
     # 5-arg fallback ignores (mol,iso); an iso-aware override is reached when defined.
     @test Q_ratio(pf, 2, 1, 220.0, 296.0) == Q_ratio(pf, 220.0, 296.0)
     @test Q_ratio(StubISOPF(), 2, 7, 250.0, 296.0) == 7.0
+end
+
+@testset "partition function drives line-strength T-dependence (within a band)" begin
+    # The integrated cross-section of one line equals its T-corrected strength S(T), so the
+    # area ratio at two temperatures must equal Q(T_ref)/Q(T)·exp(c₂E(1/T_ref-1/T))·stim —
+    # i.e. the TIPS partition function actually enters the line strength end-to-end.
+    db = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = [2000.0], S = [1e-21],
+                      E_lower = [800.0], g_upper = [1.0], γ_air = [0.05], γ_self = [0.0],
+                      n_air = [0.7], δ_air = [0.0], molar_mass = [44.0],
+                      meta = SourceMetadata("synthetic", 296.0, 1013.25))
+    model = LineByLineModel(db, TIPS2017PF(); profile = Voigt(), wing_cutoff = 150.0)
+    dν = 0.002
+    grid = collect(1850.0:dν:2150.0)
+    area(T) = sum(compute_cross_section(model, grid, 1013.25, T)) * dν
+    Tref, T = 296.0, 230.0
+    Qr = Q_ratio(TIPS2017PF(), 2, 1, T, Tref)                       # Q(296)/Q(230)
+    c₂ = AtmosphericAbsorption.Constants.C2_RAD
+    expected = Qr * exp(c₂ * 800.0 * (1 / Tref - 1 / T)) *
+               (-expm1(-c₂ * 2000.0 / T)) / (-expm1(-c₂ * 2000.0 / Tref))
+    @test area(T) / area(Tref) ≈ expected rtol = 5e-3
+    @test !(Qr ≈ 1)                                                 # Q genuinely varies with T
 end

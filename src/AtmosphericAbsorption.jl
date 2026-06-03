@@ -15,12 +15,14 @@ include("LineShapes/LineShapes.jl")
 include("PartitionFunctions/PartitionFunctions.jl")
 include("LineLists/LineLists.jl")
 include("Crosssections/Crosssections.jl")
+include("Continuum/Continuum.jl")
 
 using .Architectures
 using .LineShapes
 using .PartitionFunctions
 using .LineLists
 using .Crosssections
+using .Continuum
 
 # Compute backends
 export AbstractArchitecture, CPU, GPU, MetalGPU, default_architecture, array_type
@@ -35,5 +37,8 @@ export AbstractLineListPort, LineDatabase, SourceMetadata,
        fetch_hitran, activate_hitran!, fetch_hitran_nonvoigt, load_hitran_nonvoigt
 # Cross-section compute core
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section
+# Continuum (CIA + MT_CKD water vapor)
+export CIATable, parse_cia_file, load_cia, cia_cross_section, cia_cross_section!,
+       MTCKDTable, MTCKDBand, load_mtckd, build_mtckd_band, h2o_continuum, h2o_continuum!
 
 end # module
