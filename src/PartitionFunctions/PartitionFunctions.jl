@@ -1,0 +1,55 @@
+"""
+    PartitionFunctions
+
+Total internal partition sums Q(T) and the temperature-correction ratio
+`Q_ratio(pf, T, T_ref) = Q(T_ref)/Q(T)` used to scale line intensities. Backends
+implement a uniform interface so HITRAN (TIPS) and ExoMol (.pf) are interchangeable.
+`TabulatedPF` covers any (T, Q) table; the TIPS-2017 NetCDF backend lands with the
+HITRAN data layer.
+"""
+module PartitionFunctions
+
+using DataInterpolations: CubicSpline
+
+export AbstractPartitionFunction, TabulatedPF, Q, Q_ratio
+
+"""Supertype for partition-function backends. Implement `Q(pf, T)`; `Q_ratio` follows."""
+abstract type AbstractPartitionFunction end
+
+"""
+    Q(pf, T)
+
+Total internal partition sum at temperature `T`. The extension point each backend
+implements; the default `Q_ratio` is defined in terms of it.
+"""
+function Q end
+
+"""
+    Q_ratio(pf, T, T_ref)
+
+Partition-sum ratio Q(T_ref)/Q(T) — the temperature correction applied to line
+intensities. Defined in terms of `Q(pf, T)`; backends may override for speed.
+"""
+@inline Q_ratio(pf::AbstractPartitionFunction, T, T_ref) = Q(pf, T_ref) / Q(pf, T)
+
+"""
+    TabulatedPF(T, Q)
+
+Partition sum from a tabulated `(T, Q)` grid, interpolated with a cubic spline.
+Works for any source that ships Q(T) values (e.g. ExoMol `.pf`).
+"""
+struct TabulatedPF{FT<:AbstractFloat,ITP} <: AbstractPartitionFunction
+    T::Vector{FT}
+    Qvals::Vector{FT}
+    spline::ITP
+end
+
+function TabulatedPF(T::AbstractVector, Qvals::AbstractVector)
+    FT = float(promote_type(eltype(T), eltype(Qvals)))
+    Tf, Qf = collect(FT, T), collect(FT, Qvals)
+    return TabulatedPF(Tf, Qf, CubicSpline(Qf, Tf))
+end
+
+@inline Q(pf::TabulatedPF, T) = pf.spline(T)
+
+end # module
