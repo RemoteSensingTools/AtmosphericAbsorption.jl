@@ -22,11 +22,28 @@ struct LineByLineModel{FT,L<:LineDatabase{FT},P<:AbstractLineProfile,
     architecture::A
 end
 
-function LineByLineModel(lines::LineDatabase{FT}, partition::AbstractPartitionFunction;
+function LineByLineModel(lines::LineDatabase{FT}, partition::AbstractPartitionFunction = lines.partition;
                          profile::AbstractLineProfile = Voigt(),
                          cpf::AbstractCPF = HumlicekWeideman32(),
                          wing_cutoff = 40, vmr = 0,
                          architecture::AbstractArchitecture = default_architecture()) where {FT}
     return LineByLineModel(lines, partition, profile, cpf,
                            FT(wing_cutoff), FT(vmr), architecture)
+end
+
+function Base.show(io::IO, m::LineByLineModel{FT}) where {FT}
+    print(io, "LineByLineModel{", FT, "}(", length(m.lines), " lines, ",
+          nameof(typeof(m.profile)), ", ", pf_name(m.partition), ")")
+end
+
+function Base.show(io::IO, ::MIME"text/plain", m::LineByLineModel{FT}) where {FT}
+    print(io, "LineByLineModel{", FT, "}")
+    print(io, "\n  lines:        ", length(m.lines), " transitions — ", join(molecules(m.lines), ", "))
+    print(io, "\n  source:       ", m.lines.meta.source)
+    print(io, "\n  partition:    ", pf_name(m.partition))
+    print(io, "\n  profile:      ", nameof(typeof(m.profile)))
+    print(io, "\n  cpf:          ", nameof(typeof(m.cpf)))
+    print(io, "\n  wing cutoff:  ", m.wing_cutoff, " cm⁻¹")
+    print(io, "\n  vmr:          ", m.vmr)
+    print(io, "\n  architecture: ", nameof(typeof(m.architecture)))
 end

@@ -12,7 +12,7 @@ module PartitionFunctions
 using DataInterpolations: CubicSpline
 using Arrow
 
-export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, TIPS2021PF, Q, Q_ratio
+export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, TIPS2021PF, Q, Q_ratio, pf_name
 
 """Supertype for partition-function backends. Implement `Q(pf, T)`; `Q_ratio` follows."""
 abstract type AbstractPartitionFunction end
@@ -61,6 +61,15 @@ function TabulatedPF(T::AbstractVector, Qvals::AbstractVector)
 end
 
 @inline Q(pf::TabulatedPF, T) = pf.spline(T)
+
+"""
+    pf_name(pf) -> String
+
+Short human-readable name of a partition-function backend (for display), e.g.
+`"TIPS-2021"`, `"tabulated"`. Defaults to the type name.
+"""
+pf_name(pf::AbstractPartitionFunction) = string(nameof(typeof(pf)))
+pf_name(::TabulatedPF) = "tabulated"
 
 include("tips.jl")
 

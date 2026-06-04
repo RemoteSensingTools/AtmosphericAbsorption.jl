@@ -37,13 +37,4 @@ HITRAN global isotopologue id for molecule `mol`, isotopologue `iso`.
 """
 global_id(mol::Integer, iso::Integer) = Int(_ISO_TABLE.global_id[_iso_row(mol, iso)])
 
-"""
-    molecule_number(name) -> Int
-
-HITRAN molecule id for a formula string (e.g. `"CO2"` → 2).
-"""
-function molecule_number(name::AbstractString)
-    k = findfirst(==(name), _ISO_TABLE.mol_name)
-    k === nothing && throw(ArgumentError("unknown molecule \"$name\""))
-    return Int(_ISO_TABLE.mol[k])
-end
+# molecule_number / molecule_symbol live in species.jl (the backend-agnostic registry).

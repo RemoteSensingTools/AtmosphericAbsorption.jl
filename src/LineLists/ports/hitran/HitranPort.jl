@@ -19,23 +19,27 @@ HitranPort(path::AbstractString; edition::AbstractString = "HITRAN2016") =
     HitranPort(String(path), String(edition))
 
 """
-    load_lines(port::HitranPort; mol=-1, iso=-1, ν_min=0.0, ν_max=Inf,
+    load_lines(port::HitranPort; mol=:ALL, iso=:ALL, ν_min=0.0, ν_max=Inf,
                min_strength=0.0, FT=Float64) -> LineDatabase{FT}
 
 Parse and filter the port's `.par` file into a `LineDatabase{FT}` sorted ascending in
-wavenumber, with per-line molar mass attached from the isotopologue table.
+wavenumber, with per-line molar mass and the TIPS-2021 partition function attached.
+`mol`/`iso` accept the generic notation — a symbol (`:CO2`, `:main`), a string, an integer
+id, or `:ALL` for every molecule/isotopologue (the multi-molecule "see what's in this band"
+case).
 """
-function load_lines(port::HitranPort; mol::Integer = -1, iso::Integer = -1,
+function load_lines(port::HitranPort; mol = -1, iso = -1,
                     ν_min::Real = 0.0, ν_max::Real = Inf, min_strength::Real = 0.0,
                     FT::Type{<:AbstractFloat} = Float64)
-    c = parse_par(port.path; mol, iso, ν_min, ν_max, min_strength)
+    m = resolve_molecule(mol); i = resolve_isotopologue(m, iso)
+    c = parse_par(port.path; mol = m, iso = i, ν_min, ν_max, min_strength)
     p = sortperm(c.ν)
-    mm = FT[molar_mass(c.mol[i], c.iso[i]) for i in p]
+    mm = FT[molar_mass(c.mol[k], c.iso[k]) for k in p]
     return LineDatabase(; mol = c.mol[p], iso = c.iso[p], ν0 = FT.(c.ν[p]), S = FT.(c.S[p]),
                         E_lower = FT.(c.E[p]), g_upper = FT.(c.g_up[p]),
                         γ_air = FT.(c.γ_air[p]), γ_self = FT.(c.γ_self[p]),
                         n_air = FT.(c.n_air[p]), δ_air = FT.(c.δ[p]), molar_mass = mm,
-                        meta = source_metadata(port, mol, iso))
+                        meta = source_metadata(port, m, i), partition = partition_function(port, m, i))
 end
 
 """

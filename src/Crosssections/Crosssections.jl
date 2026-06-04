@@ -18,8 +18,8 @@ using ..Constants
 using ..LineShapes: AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt,
                     Rautian, SpeedDependentRautian, HartmannTran,
                     AbstractCPF, HumlicekWeideman32, evaluate
-using ..PartitionFunctions: AbstractPartitionFunction, Q_ratio
-using ..LineLists: LineDatabase
+using ..PartitionFunctions: AbstractPartitionFunction, Q_ratio, pf_name
+using ..LineLists: LineDatabase, molecules
 
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
        TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc

@@ -5,4 +5,5 @@
 *.data  text eol=lf
 *.xsc   text eol=lf
 *.txt   text eol=lf
+*.csv   text eol=lf
 *.arrow binary

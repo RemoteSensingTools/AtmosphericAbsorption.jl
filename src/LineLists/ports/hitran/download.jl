@@ -47,13 +47,17 @@ cm⁻¹ from hitran.org, caching it in a Scratch dir with provenance. Returns th
 `.par` path. `edition` is the cache label; the public API serves the current HITRAN.
 Wrap the result in a `HitranPort` to load it.
 """
-function fetch_hitran(molecule::AbstractString; numin::Real = 0, numax::Real = 150000,
-                      edition::AbstractString = "HITRAN2020", force::Bool = false)
-    ids = _hitran_iso_ids(molecule_number(molecule))
-    isempty(ids) && error("no HITRAN isotopologues found for \"$molecule\"")
+function fetch_hitran(molecule::Union{Integer,Symbol,AbstractString}; numin::Real = 0,
+                      numax::Real = 150000, edition::AbstractString = "HITRAN2020",
+                      force::Bool = false)
+    id = resolve_molecule(molecule)
+    id < 1 && error("fetch_hitran needs a specific molecule (e.g. :CO2), not :ALL")
+    name = String(molecule_symbol(id))     # canonical cache key, so :CO2/\"CO2\"/2 share a file
+    ids = _hitran_iso_ids(id)
+    isempty(ids) && error("no HITRAN isotopologues found for $name")
     dir = joinpath(_hitran_dir(), edition)
     mkpath(dir)
-    par, meta = joinpath(dir, "$molecule.par"), joinpath(dir, "$molecule.meta.toml")
+    par, meta = joinpath(dir, "$name.par"), joinpath(dir, "$name.meta.toml")
 
     if !force && isfile(par) && _hitran_cache_covers(meta, numin, numax)
         return par
@@ -71,17 +75,17 @@ function fetch_hitran(molecule::AbstractString; numin::Real = 0, numax::Real = 1
              resp.response.status : 0
     if status == 403
         rm(par; force = true)
-        error("HITRAN API rate limit exceeded (HTTP 403) for $molecule — try again later.")
+        error("HITRAN API rate limit exceeded (HTTP 403) for $name — try again later.")
     elseif status ≥ 400
         rm(par; force = true)
-        error("HITRAN API request failed (HTTP $status) for $molecule.")
+        error("HITRAN API request failed (HTTP $status) for $name.")
     end
     (isfile(par) && filesize(par) > 0 && _looks_like_par(par)) ||
         (rm(par; force = true);
-         error("HITRAN download for $molecule [$numin, $numax] returned no valid line data."))
+         error("HITRAN download for $name [$numin, $numax] returned no valid line data."))
 
     open(meta, "w") do io
-        println(io, "molecule = \"", molecule, "\"")
+        println(io, "molecule = \"", name, "\"")
         println(io, "edition = \"", edition, "\"")
         println(io, "numin = ", numin)
         println(io, "numax = ", numax)
@@ -98,6 +102,6 @@ end
 Convenience constructor that downloads HITRAN data for `molecule` (via `fetch_hitran`)
 and returns a `HitranPort` pointing at the cached `.par`.
 """
-HitranPort(; molecule::AbstractString, numin::Real = 0, numax::Real = 150000,
-           edition::AbstractString = "HITRAN2020", force::Bool = false) =
+HitranPort(; molecule::Union{Integer,Symbol,AbstractString}, numin::Real = 0,
+           numax::Real = 150000, edition::AbstractString = "HITRAN2020", force::Bool = false) =
     HitranPort(fetch_hitran(molecule; numin, numax, edition, force); edition)

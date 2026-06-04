@@ -48,8 +48,8 @@ struct TIPS2021PF <: AbstractPartitionFunction end
 
 const _TIPSPF = Union{TIPS2017PF,TIPS2021PF}
 
-_tips_name(::TIPS2017PF) = "TIPS-2017"
-_tips_name(::TIPS2021PF) = "TIPS-2021"
+pf_name(::TIPS2017PF) = "TIPS-2017"
+pf_name(::TIPS2021PF) = "TIPS-2021"
 
 function _tips_series(::TIPS2017PF, mol::Integer, iso::Integer)
     s = get(_TIPS2017, (Int32(mol), Int32(iso)), nothing)
@@ -78,7 +78,7 @@ function Q_ratio(pf::_TIPSPF, mol::Integer, iso::Integer, T, T_ref)
     Tmin, Tmax = first(TT), last(TT)
     for (label, Tq) in (("T", T), ("T_ref", T_ref))
         Tmin ≤ Tq ≤ Tmax || throw(ArgumentError(
-            "$(_tips_name(pf)): $label=$Tq K outside [$Tmin, $Tmax] for (mol=$mol, iso=$iso)"))
+            "$(pf_name(pf)): $label=$Tq K outside [$Tmin, $Tmax] for (mol=$mol, iso=$iso)"))
     end
     spline = CubicSpline(TQ, TT)
     return spline(T_ref) / spline(T)

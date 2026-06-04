@@ -31,11 +31,13 @@ export AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt,
        Rautian, SpeedDependentRautian, HartmannTran,
        AbstractCPF, HumlicekWeideman32, ErfcxCPF, w, pcqsdhc
 # Partition functions
-export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, TIPS2021PF, Q, Q_ratio
+export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, TIPS2021PF, Q, Q_ratio, pf_name
 # Line lists
 export AbstractLineListPort, LineDatabase, SourceMetadata,
        load_lines, partition_function, source_metadata, HitranPort, ExoMolPort,
-       fetch_hitran, activate_hitran!, fetch_hitran_nonvoigt, load_hitran_nonvoigt
+       fetch_hitran, activate_hitran!, fetch_hitran_nonvoigt, load_hitran_nonvoigt,
+       molecules, molecule_number, molecule_symbol, isotopologue,
+       register_molecule!, register_isotopologue!, resolve_molecule, resolve_isotopologue
 # Cross-section compute core
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
        TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc

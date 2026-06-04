@@ -80,12 +80,21 @@ end
 
 Fetch the ExoMol files (only the `.trans` chunks overlapping `[ν_min, ν_max]`), stream
 the transitions, compute the abundance-weighted line intensity at 296 K, assign air
-broadening, and return a `LineDatabase{FT}` sorted in wavenumber. `mol`/`iso` are
-accepted for interface symmetry but ExoMol files are single-isotopologue.
+broadening, and return a `LineDatabase{FT}` sorted in wavenumber with the ExoMol `.pf`
+partition function attached. `mol`/`iso` are accepted (any notation) for interface
+symmetry but ExoMol files are single-isotopologue.
 """
-function load_lines(port::ExoMolPort; mol::Integer = -1, iso::Integer = -1,
+function load_lines(port::ExoMolPort; mol = -1, iso = -1,
                     ν_min::Real = 0.0, ν_max::Real = Inf, min_strength::Real = 0.0,
                     FT::Type{<:AbstractFloat} = Float64)
+    # ExoMol files are single-isotopologue; reject a mismatched selector rather than ignore it.
+    rm_ = resolve_molecule(mol)
+    (rm_ == -1 || rm_ == port.hitran_mol) || throw(ArgumentError(
+        "this ExoMolPort holds $(molecule_symbol(port.hitran_mol)) iso $(port.hitran_iso); " *
+        "cannot select mol=$(molecule_symbol(rm_))"))
+    ri_ = resolve_isotopologue(port.hitran_mol, iso)
+    (ri_ == -1 || ri_ == port.hitran_iso) || throw(ArgumentError(
+        "this ExoMolPort holds iso $(port.hitran_iso); cannot select iso=$ri_"))
     m   = fetch_exomol_meta(port)
     def = parse_def(m.def)
     _write_provenance(m.dir, port, m.def, def.version)
@@ -109,7 +118,7 @@ function load_lines(port::ExoMolPort; mol::Integer = -1, iso::Integer = -1,
                         ν0 = FT.(cols.ν0[p]), S = FT.(cols.S[p]), E_lower = FT.(cols.E[p]),
                         g_upper = FT.(cols.g[p]), γ_air = FT.(cols.γ[p]), γ_self = copy(z),
                         n_air = FT.(cols.n[p]), δ_air = copy(z), molar_mass = fill(FT(def.mass), n),
-                        meta = _exomol_meta(port, def.version))
+                        meta = _exomol_meta(port, def.version), partition = TabulatedPF(pf.T, pf.Q))
 end
 
 """

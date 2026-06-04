@@ -110,4 +110,11 @@ end
         grid  = collect(FT, 999:FT(0.05):1001)
         @test @inferred(compute_cross_section(model, grid, 1013.25, 296.0)) isa Vector{FT}
     end
+
+    @testset "subset is type-stable and partition-preserving ($FT)" for FT in (Float32, Float64)
+        db = oneline_db(FT)                              # mol = 2 (CO2), default TIPS2021PF
+        @test @inferred(db[db.mol .== 2]) isa typeof(db)
+        @test molecules(db) == [:CO2]
+        @test db[db.mol .== 2].partition === db.partition
+    end
 end

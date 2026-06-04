@@ -43,10 +43,14 @@ Download HITRAN line data **with non-Voigt (HT/SDV) parameters** for `molecule` 
 `[numin, numax]` via the authenticated API, caching the result with provenance. Needs an
 API key. Returns the local data-file path.
 """
-function fetch_hitran_nonvoigt(molecule::AbstractString; numin::Real = 0, numax::Real = 150000,
-                               edition::AbstractString = "HITRAN-HT", force::Bool = false)
+function fetch_hitran_nonvoigt(molecule::Union{Integer,Symbol,AbstractString}; numin::Real = 0,
+                               numax::Real = 150000, edition::AbstractString = "HITRAN-HT",
+                               force::Bool = false)
+    id = resolve_molecule(molecule)
+    id < 1 && error("fetch_hitran_nonvoigt needs a specific molecule (e.g. :H2O), not :ALL")
+    name = String(molecule_symbol(id))
     dir = joinpath(_hitran_dir(), edition); mkpath(dir)
-    data, meta = joinpath(dir, "$molecule.data"), joinpath(dir, "$molecule.meta.toml")
+    data, meta = joinpath(dir, "$name.data"), joinpath(dir, "$name.meta.toml")
     req = join(["par_line"; _NONVOIGT_PARAMS], ",")
     # Reuse a covering cache without needing an API key (offline/keyless re-runs),
     # but only if it was fetched with the current parameter set.
@@ -55,8 +59,8 @@ function fetch_hitran_nonvoigt(molecule::AbstractString; numin::Real = 0, numax:
     end
 
     key = hitran_api_key()
-    ids = _hitran_iso_ids(molecule_number(molecule))
-    isempty(ids) && error("no HITRAN isotopologues found for \"$molecule\"")
+    ids = _hitran_iso_ids(id)
+    isempty(ids) && error("no HITRAN isotopologues found for $name")
     # Step 1: header (key in URL — kept in memory, never stored).
     header_url = "$(_HITRAN_API)/$(key)/transitions?iso_ids_list=$(join(ids, ','))" *
                  "&numin=$(numin)&numax=$(numax)&head=false&fixwidth=0&request_params=$(req)"
@@ -64,7 +68,7 @@ function fetch_hitran_nonvoigt(molecule::AbstractString; numin::Real = 0, numax:
     Downloads.request(header_url; output = buf, throw = false)
     m = match(r"\"data\":\s*\"([^\"]+)\"", String(take!(buf)))
     m === nothing &&
-        error("HITRAN non-Voigt: no data file in the API response for $molecule " *
+        error("HITRAN non-Voigt: no data file in the API response for $name " *
               "(check the API key and that the molecule has HT parameters in this window).")
 
     # Step 2: the (public) results file.
@@ -72,10 +76,10 @@ function fetch_hitran_nonvoigt(molecule::AbstractString; numin::Real = 0, numax:
         Downloads.request("$(_HITRAN_RESULTS)/$(m.captures[1])"; output = out, throw = false)
     end
     (isfile(data) && filesize(data) > 0 && _looks_like_par(data)) ||
-        (rm(data; force = true); error("HITRAN non-Voigt download empty/invalid for $molecule."))
+        (rm(data; force = true); error("HITRAN non-Voigt download empty/invalid for $name."))
 
     open(meta, "w") do io          # provenance WITHOUT the key/authenticated URL
-        println(io, "molecule = \"", molecule, "\"")
+        println(io, "molecule = \"", name, "\"")
         println(io, "edition = \"", edition, "\"")
         println(io, "numin = ", numin)
         println(io, "numax = ", numax)
@@ -101,13 +105,15 @@ from the basic `.par` format — are also pulled, defaulting to `n_air` and 0 re
 when HITRAN does not provide them. Pair with `profile = SpeedDependentVoigt()` or
 `HartmannTran()`.
 """
-function load_hitran_nonvoigt(molecule::AbstractString; numin::Real = 0, numax::Real = Inf,
-                              min_strength::Real = 0.0, FT::Type{<:AbstractFloat} = Float64,
+function load_hitran_nonvoigt(molecule::Union{Integer,Symbol,AbstractString}; numin::Real = 0,
+                              numax::Real = Inf, min_strength::Real = 0.0,
+                              FT::Type{<:AbstractFloat} = Float64,
                               edition::AbstractString = "HITRAN-HT", force::Bool = false)
+    name = String(molecule_symbol(resolve_molecule(molecule)))
     path = fetch_hitran_nonvoigt(molecule; numin, numax = isfinite(numax) ? numax : 150000,
                                  edition, force)
     return _parse_nonvoigt_data(path; numin, numax, min_strength, FT,
-                                source = "HITRAN-HT $molecule")
+                                source = "HITRAN-HT $name")
 end
 
 # Parse a HITRANonline results file (160-char par_line + the comma-separated
@@ -149,5 +155,5 @@ function _parse_nonvoigt_data(path::AbstractString; numin::Real = 0, numax::Real
                         γ_self = FT.(γself[p]), n_air = FT.(nair[p]), δ_air = FT.(δair[p]),
                         γ2_air = FT.(γ2[p]), δ2_air = FT.(δ2[p]), η = FT.(η[p]), νVC = FT.(νVC[p]),
                         Y_LM = FT.(Y[p]), molar_mass = FT.(mm[p]),
-                        meta = SourceMetadata(source, T_REF, P_REF))
+                        meta = SourceMetadata(source, T_REF, P_REF), partition = TIPS2021PF())
 end
