@@ -44,7 +44,7 @@ using AtmosphericAbsorption
 
 # download CO2 lines for the 1.6 µm band straight from hitran.org
 db    = load_lines(HitranPort(; molecule = "CO2", numin = 6300, numax = 6400); mol = 2, iso = 1)
-model = LineByLineModel(db, TIPS2017PF(); profile = Voigt(), wing_cutoff = 40.0)
+model = LineByLineModel(db, TIPS2021PF(); profile = Voigt(), wing_cutoff = 40.0)
 
 grid  = collect(6300.0:0.01:6400.0)          # cm⁻¹
 σ     = compute_cross_section(model, grid, 500.0, 250.0)   # pressure [hPa], temperature [K]
@@ -69,8 +69,8 @@ Julia 1.9+. GPU support loads automatically when `CUDA.jl` (NVIDIA) or `Metal.jl
   from HITRANonline.
 - **MT_CKD** water-vapor continuum and **CIA** collision-induced absorption.
 - **CPU / CUDA / Metal** from one kernel; **Float32 & Float64** to machine precision.
-- **Partition functions** (TIPS-2017 and ExoMol) driving the line-strength temperature
-  dependence.
+- **Partition functions** (latest TIPS-2021, with TIPS-2017, and ExoMol) driving the
+  line-strength temperature dependence.
 
 This package is a clean-slate successor to the absorption module of
 [vSmartMOM.jl](https://github.com/RemoteSensingTools/vSmartMOM.jl).

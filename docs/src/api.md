@@ -46,6 +46,7 @@ AtmosphericAbsorption.LineShapes.ErfcxCPF
 
 ```@docs
 AbstractPartitionFunction
+TIPS2021PF
 TIPS2017PF
 TabulatedPF
 Q_ratio

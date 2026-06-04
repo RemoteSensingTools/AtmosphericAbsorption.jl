@@ -78,6 +78,32 @@ function plot_co2_crosssection()
             "wavenumber  [cm⁻¹]", "σ  [cm²/molecule]"; ytype = "log"))
 end
 
+# Read a committed cross-section overlay (cols: ν, σ_a, σ_b). Generated offline by
+# benchmark/gen_exomol_fig.jl so the doc build needs no network (CI-safe).
+function read_xsec(name)
+    nu, a, b = Float64[], Float64[], Float64[]
+    for ln in eachline(joinpath(@__DIR__, "src", "assets", name))
+        startswith(strip(ln), "#") && continue
+        c = split(ln)
+        isempty(c) && continue
+        push!(nu, parse(Float64, c[1])); push!(a, parse(Float64, c[2])); push!(b, parse(Float64, c[3]))
+    end
+    nu, a, b
+end
+
+# ExoMol vs HITRAN CO cross-section — ExoMol derives line strengths from Einstein-A
+# coefficients + its own partition function, yet lands on top of HITRAN.
+function plot_exomol_co()
+    nu, σe, σh = read_xsec("exomol_co_xsec.txt")
+    te = (; x = nu, y = σe, mode = "lines", type = "scatter",
+          name = "ExoMol Li2015 (S from Einstein-A)", line = (; color = "#1f77b4", width = 2))
+    th = (; x = nu, y = σh, mode = "lines", type = "scatter",
+          name = "HITRAN", line = (; color = "#d62728", width = 2, dash = "dot"))
+    write_plot("exomol_co_xsec", [te, th],
+        lay("CO cross-section — ExoMol vs HITRAN (p = 1013 hPa, T = 296 K)",
+            "wavenumber  [cm⁻¹]", "σ  [cm²/molecule]"; ytype = "log"))
+end
+
 function plot_benchmark()
     cut = ["2.5", "5", "10", "25", "full"]
     hapi2 = [114.0, 173.0, 286.0, 623.0, 4691.0]
@@ -97,19 +123,23 @@ end
 @info "Generating documentation figures…"
 plot_lineshape_families()
 plot_co2_crosssection()
+plot_exomol_co()
 plot_benchmark()
+
+const REPO = "github.com/RemoteSensingTools/AtmosphericAbsorption.jl"
+const IN_CI = get(ENV, "CI", "false") == "true"
 
 makedocs(;
     sitename = "AtmosphericAbsorption.jl",
     modules = [AtmosphericAbsorption],
     clean = true,
     checkdocs = :none,
-    remotes = nothing,         # no GitHub remote configured yet → disable source links
     format = MarkdownVitepress(;
-        repo = "github.com/cfranken/AtmosphericAbsorption.jl",
+        repo = REPO,
         devbranch = "main",
         devurl = "dev",
-        deploy_decision = Documenter.DeployDecision(all_ok = false),
+        # Deploy only in CI; local builds just render.
+        deploy_decision = IN_CI ? nothing : Documenter.DeployDecision(all_ok = false),
         description = "GPU-accelerated molecular absorption cross-sections for atmospheric radiative transfer.",
         assets = ["assets/logo.png"],
         sidebar_drawer = true,
@@ -126,3 +156,14 @@ makedocs(;
         "API" => "api.md",
     ],
 )
+
+if IN_CI
+    DocumenterVitepress.deploydocs(;
+        root = @__DIR__,
+        repo = "$(REPO).git",
+        target = "build",
+        branch = "gh-pages",
+        devbranch = "main",
+        push_preview = true,
+    )
+end

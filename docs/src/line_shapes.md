@@ -55,7 +55,9 @@ This fills the database's advanced columns (`γ2_air`, `δ2_air`, `η`, `νVC`),
 
 ## Line mixing folds in automatically
 
-Voigt, Lorentz, speed-dependent Voigt, and Hartmann-Tran are **collisional** profiles, and they apply **first-order (Rosenkranz) line mixing** automatically using each line's Y_LM coefficient. Line mixing matters where neighboring lines overlap strongly (CO₂ Q-branches, O₂ A-band), redistributing intensity between the lines and reshaping the band envelope. You do not enable it separately — it is built into the collisional profiles. `Doppler()`, being the zero-pressure limit, carries no line mixing.
+Voigt, Lorentz, speed-dependent Voigt, and Hartmann-Tran are **collisional** profiles: wherever a line carries a first-order (Rosenkranz) line-mixing coefficient `Y_LM`, they fold it in automatically as the asymmetric `Y·Im(W)` term. Line mixing matters where neighboring lines overlap strongly (CO₂ Q-branches, O₂ A-band), redistributing intensity between the lines and reshaping the band envelope. You do not enable it separately — the fold is built into the collisional profiles and switches on for exactly those lines whose `Y_LM` is non-zero.
+
+`Y_LM` is filled from HITRAN's line-mixing parameters (`Y_HT_air_296` / `Y_SDV_air_296`) through the authenticated non-Voigt endpoint (see [Data sources](data_sources.md) §3) — currently provided by HITRAN for CO₂, O₂, and a few others. A basic Voigt `.par` load leaves `Y_LM` at zero, so no mixing is applied there. `Doppler()`, being the zero-pressure limit, carries no line mixing.
 
 ## Swapping profiles on the same line list
 
@@ -67,7 +69,7 @@ using AtmosphericAbsorption
 # Authenticated load so the advanced (HT) columns are populated
 activate_hitran!("your-key")
 lines     = load_hitran_nonvoigt("H2O"; numin=3700, numax=3850, FT=Float64)
-partition = TIPS2017PF()
+partition = TIPS2021PF()
 
 grid = collect(3700.0:0.01:3850.0)   # cm⁻¹
 p, T = 1013.25, 296.0                 # hPa, K

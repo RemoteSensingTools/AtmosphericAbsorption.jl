@@ -52,15 +52,20 @@ end
     @test exomol_intensity(17, 17.52, 2172.7588, 107.642, 107.4198, 0.986544) ≈ 4.556e-19 rtol = 2e-3
 end
 
-# Full integration: fetch real ExoMol CO and validate against HITRAN. Network-gated —
-# skipped (not failed) when exomol.com is unreachable.
+# Full integration: fetch real ExoMol CO and validate against HITRAN. Opt-in
+# (AA_NETWORK_TESTS=1) so CI stays offline; still skips gracefully if exomol.com is down.
 @testset "ExoMol CO vs HITRAN (network)" begin
     port = ExoMolPort("CO", "12C-16O", "Li2015"; hitran_mol = 5, hitran_iso = 1)
-    edb = try
-        load_lines(port; ν_min = 2100.0, ν_max = 2200.0, min_strength = 1e-25)
-    catch e
-        @info "ExoMol fetch failed (offline?) — skipping network test" exception = (e, catch_backtrace())
+    edb = if !haskey(ENV, "AA_NETWORK_TESTS")
+        @info "ExoMol network test skipped — set AA_NETWORK_TESTS=1 to enable"
         nothing
+    else
+        try
+            load_lines(port; ν_min = 2100.0, ν_max = 2200.0, min_strength = 1e-25)
+        catch e
+            @info "ExoMol fetch failed (offline?) — skipping network test" exception = (e, catch_backtrace())
+            nothing
+        end
     end
     if edb !== nothing
         hdb = load_lines(HitranPort(COPAR); mol = 5, iso = 1, ν_min = 2100.0, ν_max = 2200.0, min_strength = 1e-25)
