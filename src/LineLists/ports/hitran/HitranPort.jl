@@ -39,11 +39,13 @@ function load_lines(port::HitranPort; mol::Integer = -1, iso::Integer = -1,
 end
 
 """
-    partition_function(::HitranPort, mol, iso) -> TIPS2017PF
+    partition_function(::HitranPort, mol, iso) -> TIPS2021PF
 
-HITRAN uses TIPS-2017 partition sums (iso-aware via `Q_ratio(pf, mol, iso, …)`).
+HITRAN partition sums from the latest edition, TIPS-2021 (iso-aware via
+`Q_ratio(pf, mol, iso, …)`). Use `TIPS2017PF()` explicitly to reproduce the previous
+edition (e.g. for HAPI cross-validation).
 """
-partition_function(::HitranPort, mol::Integer, iso::Integer) = TIPS2017PF()
+partition_function(::HitranPort, mol::Integer, iso::Integer) = TIPS2021PF()
 
 """
     source_metadata(port::HitranPort, mol, iso) -> SourceMetadata

@@ -14,7 +14,7 @@ using Scratch: @get_scratch!
 using Printf: @sprintf
 import Downloads, SHA, Dates, TOML
 using ..Constants: T_REF, P_REF, C_LIGHT, C2_RAD
-using ..PartitionFunctions: TIPS2017PF, TabulatedPF
+using ..PartitionFunctions: TIPS2017PF, TIPS2021PF, TabulatedPF
 
 export AbstractLineListPort, LineDatabase, SourceMetadata,
        load_lines, partition_function, source_metadata,

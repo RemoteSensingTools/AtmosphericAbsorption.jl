@@ -22,6 +22,24 @@ Q_ratio_ext(::StubISOPF, mol::Integer, iso::Integer, T, T_ref) = float(iso)
     @test Q_ratio(StubISOPF(), 2, 7, 250.0, 296.0) == 7.0
 end
 
+@testset "TIPS-2021 (latest edition) + 2017 fallback" begin
+    p21, p17 = TIPS2021PF(), TIPS2017PF()
+    @test Q_ratio(p21, 1, 1, 296.0, 296.0) == 1               # ref/ref = 1
+    # Latest edition is the HitranPort default.
+    port = HitranPort(joinpath(@__DIR__, "golden", "co_2100_2200.par"))
+    @test partition_function(port, 5, 1) isa TIPS2021PF
+    # Physical and close to the previous edition for the major isotopologues.
+    for (m, i) in ((1, 1), (2, 1), (5, 1), (7, 1))
+        r21 = Q_ratio(p21, m, i, 250.0, 296.0)
+        @test r21 > 1                                          # Q(296) > Q(250)
+        @test isapprox(r21, Q_ratio(p17, m, i, 250.0, 296.0); rtol = 1e-2)
+    end
+    # TIPS-2021 has no online Q-file for minor O₃ (3,10); it falls back to the 2017 series.
+    @test Q_ratio(p21, 3, 10, 250.0, 296.0) == Q_ratio(p17, 3, 10, 250.0, 296.0)
+    # Out-of-range temperature throws.
+    @test_throws ArgumentError Q_ratio(p21, 1, 1, 6000.0, 296.0)
+end
+
 @testset "partition function drives line-strength T-dependence (within a band)" begin
     # The integrated cross-section of one line equals its T-corrected strength S(T), so the
     # area ratio at two temperatures must equal Q(T_ref)/Q(T)·exp(c₂E(1/T_ref-1/T))·stim —

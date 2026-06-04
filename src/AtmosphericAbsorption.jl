@@ -30,7 +30,7 @@ export AbstractArchitecture, CPU, GPU, MetalGPU, default_architecture, array_typ
 export AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt, HartmannTran,
        AbstractCPF, HumlicekWeideman32, ErfcxCPF, w, pcqsdhc
 # Partition functions
-export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, Q, Q_ratio
+export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, TIPS2021PF, Q, Q_ratio
 # Line lists
 export AbstractLineListPort, LineDatabase, SourceMetadata,
        load_lines, partition_function, source_metadata, HitranPort, ExoMolPort,

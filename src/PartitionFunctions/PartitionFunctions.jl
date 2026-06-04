@@ -12,7 +12,7 @@ module PartitionFunctions
 using DataInterpolations: CubicSpline
 using Arrow
 
-export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, Q, Q_ratio
+export AbstractPartitionFunction, TabulatedPF, TIPS2017PF, TIPS2021PF, Q, Q_ratio
 
 """Supertype for partition-function backends. Implement `Q(pf, T)`; `Q_ratio` follows."""
 abstract type AbstractPartitionFunction end
@@ -62,6 +62,6 @@ end
 
 @inline Q(pf::TabulatedPF, T) = pf.spline(T)
 
-include("tips2017.jl")
+include("tips.jl")
 
 end # module
