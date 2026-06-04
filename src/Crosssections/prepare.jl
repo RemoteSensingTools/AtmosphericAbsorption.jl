@@ -18,8 +18,9 @@ struct PreparedLines{V,VI}
 end
 
 function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
-                 pressure::Real, temperature::Real) where {FT}
-    (; lines, partition, wing_cutoff, vmr, architecture) = model
+                 pressure::Real, temperature::Real; vmr::Real = model.vmr) where {FT}
+    (; lines, partition, wing_cutoff, architecture) = model
+    vmr    = FT(vmr)
     T, p   = FT(temperature), FT(pressure)
     Tref   = FT(lines.meta.T_ref)
     pratio = p / FT(lines.meta.p_ref)

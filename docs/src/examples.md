@@ -150,4 +150,21 @@ db0.Y_LM .= 0
 
 (`load_hitran_nonvoigt` also brings the self-broadening `n_self`/`δ_self`; for CO₂ HITRAN provides the speed-dependent-Voigt line-mixing coefficient rather than a speed-dependent width, so the Hartmann-Tran result here coincides with Voigt-plus-mixing.)
 
+## 8. Self-broadening: H₂O cross-section vs humidity
+
+Self-broadening (the absorber broadening itself) matters when the gas is abundant — chiefly H₂O. The `vmr` (volume mixing ratio of the absorber) blends self- and foreign(air)-broadening as `(1-vmr)·foreign + vmr·self`; pass it per call to sweep the cross-section over humidity without rebuilding the model.
+
+```julia
+using AtmosphericAbsorption
+
+lines = load_lines(HitranPort(; molecule=:H2O, numin=3800, numax=3820); mol=:H2O)
+model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
+grid  = collect(3800.0:0.01:3820.0)
+
+σ_dry = compute_cross_section(model, grid, 1013.25, 296.0; vmr=0.0)    # foreign (air) only
+σ_wet = compute_cross_section(model, grid, 1013.25, 296.0; vmr=0.04)   # 4 % H₂O — adds self-broadening
+```
+
+`vmr` defaults to the model's own (set at construction); `vmr=0` is pure foreign broadening. The self-broadening parameters travel on the line list — `γ_self` from any `.par`, and `n_self`/`δ_self` from the [authenticated endpoint](data_sources.md).
+
 See the [API reference](@ref) for the full list of functions, keywords, and types.

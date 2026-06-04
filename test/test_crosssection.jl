@@ -100,6 +100,22 @@ end
         @test !isapprox(Γ0, pr * FT(γa) * (Tref / T)^FT(na); rtol = 1e-3)
     end
 
+    @testset "per-call vmr overrides the model's ($FT)" for FT in (Float32, Float64)
+        db = LineDatabase(; mol = Int32[1], iso = Int32[1], ν0 = FT[1000], S = FT[1e-21],
+            E_lower = FT[0], g_upper = FT[1], γ_air = FT[0.09], γ_self = FT[0.15], n_air = FT[0.7],
+            δ_air = FT[-0.008], n_self = FT[0.5], δ_self = FT[0.02], molar_mass = FT[18],
+            meta = SourceMetadata("synthetic", 296.0, 1013.25))
+        T, p = FT(260), FT(800)
+        grid = collect(FT, 999:FT(0.004):1001)
+        m0 = LineByLineModel(db, flatpf(FT); profile = Voigt(), wing_cutoff = FT(40), vmr = FT(0))
+        mv = LineByLineModel(db, flatpf(FT); profile = Voigt(), wing_cutoff = FT(40), vmr = FT(0.4))
+        # Overriding vmr at call time equals building the model with that vmr…
+        @test compute_cross_section(m0, grid, p, T; vmr = FT(0.4)) ≈ compute_cross_section(mv, grid, p, T)
+        # …the default uses the model's own vmr, and self-broadening genuinely moves σ.
+        @test compute_cross_section(mv, grid, p, T) ≈ compute_cross_section(mv, grid, p, T; vmr = FT(0.4))
+        @test !(compute_cross_section(m0, grid, p, T) ≈ compute_cross_section(m0, grid, p, T; vmr = FT(0.4)))
+    end
+
     @testset "empty grid returns empty ($FT)" for FT in (Float32, Float64)
         model = LineByLineModel(oneline_db(FT), flatpf(FT))
         @test isempty(compute_cross_section(model, FT[], 1013.25, 296.0))

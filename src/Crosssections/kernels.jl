@@ -24,18 +24,23 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
 end
 
 """
-    compute_cross_section(model, grid, pressure, temperature) -> Vector
+    compute_cross_section(model, grid, pressure, temperature; vmr=model.vmr) -> Vector
 
 Absorption cross-section [cm²/molecule] on `grid` [cm⁻¹] at `pressure` [hPa] and
 `temperature` [K]. Result lives on the model's architecture (host `Array` for CPU).
+
+`vmr` is the volume mixing ratio of the absorbing gas, used to blend self- and
+foreign(air)-broadening: width and shift are `(1-vmr)·foreign + vmr·self`. It defaults to
+the model's `vmr`, but can be overridden per call — e.g. to sweep the H₂O cross-section
+over humidity without rebuilding the model. `vmr=0` is pure foreign (air) broadening.
 """
 function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
-                               pressure::Real, temperature::Real) where {FT}
+                               pressure::Real, temperature::Real; vmr::Real = model.vmr) where {FT}
     arch = model.architecture
     Ng   = length(grid)
     σ    = array_type(arch)(zeros(FT, Ng))
     Ng == 0 && return σ
-    prep = prepare(model, grid, pressure, temperature)
+    prep = prepare(model, grid, pressure, temperature; vmr = FT(vmr))
     if prep.n > 0
         gridd  = array_type(arch)(collect(FT, grid))
         kernel = _crosssection_kernel!(devi(arch))
