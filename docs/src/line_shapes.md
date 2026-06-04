@@ -14,7 +14,9 @@ Each profile is a more complete physical model than the one before it. Pass any 
 | Lorentz | `Lorentz()` | Collisional (pressure) broadening only. Lorentzian. |
 | Voigt | `Voigt()` | Convolution of Doppler and Lorentz — the standard workhorse. |
 | Speed-dependent Voigt | `SpeedDependentVoigt()` | Voigt plus the speed dependence of collisional width/shift. |
-| Hartmann-Tran | `HartmannTran()` | Full pCqSDHC: speed dependence + velocity-changing (Dicke) collisions. |
+| Rautian | `Rautian()` | Voigt plus velocity-changing (Dicke) collisions — narrows the core. |
+| Speed-dependent Rautian | `SpeedDependentRautian()` | Speed dependence + Dicke narrowing, without the HT correlation. |
+| Hartmann-Tran | `HartmannTran()` | Full pCqSDHC: speed dependence + Dicke narrowing + their correlation. |
 
 ### Doppler — thermal broadening
 
@@ -37,6 +39,10 @@ The convolution has no closed form; it is evaluated through the **complex probab
 ### Speed-dependent Voigt
 
 The collisional width and shift actually depend on the relative speed of the colliding molecules, which the plain Voigt model ignores. Accounting for this speed dependence narrows and subtly reshapes the core. Select it with `SpeedDependentVoigt()`. The advanced line parameters it needs (γ₂, δ₂) come from `load_hitran_nonvoigt`.
+
+### Rautian and speed-dependent Rautian
+
+Velocity-changing collisions confine a molecule's motion, narrowing the Doppler core below its free-flight width — the **Dicke narrowing** effect. `Rautian()` adds this hard-collision narrowing (parameter `νVC`) to a Voigt line; `SpeedDependentRautian()` adds it on top of the speed-dependent profile. Both are limits of the same pCqSDHC engine as Hartmann-Tran, with the HT correlation parameter η set to zero, and both reduce to their non-narrowed counterparts when `νVC = 0`. The effect is largest where the line is Doppler-dominated (low pressure / high altitude); it conserves the integrated line strength while raising the peak.
 
 ### Hartmann-Tran — the full pCqSDHC model
 

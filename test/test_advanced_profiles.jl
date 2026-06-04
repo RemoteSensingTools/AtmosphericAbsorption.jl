@@ -69,4 +69,46 @@ htpf(::Type{FT}) where {FT} = TabulatedPF(FT[150, 296, 400], FT[1, 1, 1])  # fla
         # analytically but Weideman32 isn't bit-exactly even, so allow a looser F32 tol.
         @test isapprox(ht, vo; rtol = FT === Float64 ? 1e-6 : 5e-4)
     end
+
+    @testset "Rautian / SD-Rautian profiles ($FT)" for FT in (Float32, Float64)
+        # Rautian = pCqSDHC with Γ2=Δ2=η=0 (Dicke narrowing, no speed dependence);
+        # SD-Rautian keeps the speed dependence but zeroes the correlation η.
+        mkdb(νVC, γ; γ2 = 0) = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = FT[1000],
+            S = FT[1e-20], E_lower = FT[0], g_upper = FT[1], γ_air = FT[γ], γ_self = FT[0],
+            n_air = FT[0], δ_air = FT[0], γ2_air = FT[γ2], νVC = FT[νVC],
+            molar_mass = FT[44], meta = SourceMetadata("synthetic", 296.0, 1013.25))
+        xsec(prof, db, grid) = compute_cross_section(
+            LineByLineModel(db, htpf(FT); profile = prof, wing_cutoff = FT(40)), grid, 1013.25, 296.0)
+
+        # νVC = 0 ⇒ Rautian reduces to Voigt.
+        g1 = collect(FT, 999:FT(0.01):1001)
+        @test isapprox(xsec(Rautian(), mkdb(0, 0.05), g1), xsec(Voigt(), mkdb(0, 0.05), g1);
+                       rtol = FT === Float64 ? 1e-6 : 5e-4)
+
+        # Doppler-comparable regime: Dicke narrowing raises the peak and conserves area.
+        g2 = collect(FT, 999.9:FT(0.0002):1000.1)
+        ra = xsec(Rautian(), mkdb(0.01, 0.001), g2)
+        vo = xsec(Voigt(), mkdb(0.0, 0.001), g2)
+        @test maximum(ra) > FT(1.1) * maximum(vo)               # narrowed core ⇒ higher peak
+        @test isapprox(sum(ra), sum(vo); rtol = FT === Float64 ? 5e-3 : 2e-2)  # area conserved
+
+        # With Γ2=0 the speed-dependent Rautian coincides with the plain Rautian.
+        @test isapprox(xsec(SpeedDependentRautian(), mkdb(0.01, 0.001), g2), ra;
+                       rtol = FT === Float64 ? 1e-6 : 5e-4)
+
+        # SD-Rautian drops the HT correlation η: it equals pCqSDHC with η=0 even when the
+        # data carries η, and so differs from the full Hartmann-Tran shape.
+        dbη = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = FT[1000], S = FT[1e-20],
+            E_lower = FT[0], g_upper = FT[1], γ_air = FT[0.02], γ_self = FT[0], n_air = FT[0],
+            δ_air = FT[-0.005], γ2_air = FT[0.004], δ2_air = FT[0.001], νVC = FT[0.01],
+            η = FT[0.3], molar_mass = FT[44], meta = SourceMetadata("synthetic", 296.0, 1013.25))
+        cpf = HumlicekWeideman32()
+        g3  = collect(FT, 999:FT(0.01):1001)
+        sdr = xsec(SpeedDependentRautian(), dbη, g3)
+        γd  = γd_of(FT, 1000, 44, 296)
+        ref = [FT(1e-20) * real(pcqsdhc(cpf, FT(1000), γd, FT(0.02), FT(0.004), FT(-0.005),
+                                        FT(0.001), FT(0.01), zero(FT), νi)) for νi in g3]
+        @test isapprox(sdr, ref; rtol = FT === Float64 ? 1e-10 : 1e-4)
+        @test !isapprox(sdr, xsec(HartmannTran(), dbη, g3); rtol = 1e-3)   # η changes the shape
+    end
 end

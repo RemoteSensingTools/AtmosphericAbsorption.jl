@@ -13,7 +13,8 @@ using ..Constants
 # `evaluate` is the kernel's internal per-line dispatch entry point — intentionally
 # NOT exported; the public line-shape API is the bare profile functions below.
 export AbstractCPF, HumlicekWeideman32, ErfcxCPF, w,
-       AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt, HartmannTran,
+       AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt,
+       Rautian, SpeedDependentRautian, HartmannTran,
        doppler, lorentz, voigt, pcqsdhc
 
 include("cpf.jl")

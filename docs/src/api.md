@@ -27,6 +27,16 @@ LineByLineModel
 compute_cross_section
 ```
 
+## Tabulated cross-sections (HITRAN `.xsc`)
+
+```@docs
+TabulatedCrossSection
+XscBand
+read_xsc
+load_xsc
+fetch_hitran_xsc
+```
+
 ## Line shapes
 
 ```@docs
@@ -34,6 +44,8 @@ AtmosphericAbsorption.LineShapes.Doppler
 AtmosphericAbsorption.LineShapes.Lorentz
 AtmosphericAbsorption.LineShapes.Voigt
 AtmosphericAbsorption.LineShapes.SpeedDependentVoigt
+AtmosphericAbsorption.LineShapes.Rautian
+AtmosphericAbsorption.LineShapes.SpeedDependentRautian
 AtmosphericAbsorption.LineShapes.HartmannTran
 AtmosphericAbsorption.LineShapes.doppler
 AtmosphericAbsorption.LineShapes.lorentz

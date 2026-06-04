@@ -117,4 +117,18 @@ tcia  = load_cia("O2-O2_2024.cia", grid)
 σ_o2  = cia_cross_section(tcia, 296.0)              # cm⁵/molecule²
 ```
 
+## 6. Tabulated cross-sections for a heavy molecule
+
+Molecules like SF₆ or the CFCs have no line list — HITRAN ships them as measured `.xsc` cross-section panels. `load_xsc` reads a `.xsc` file into a `TabulatedCrossSection`, which answers the same `compute_cross_section` call as a line-by-line model, interpolating in wavenumber and temperature onto your grid.
+
+```julia
+using AtmosphericAbsorption
+
+path  = fetch_hitran_xsc("SF6_..._N2.xsc")     # filename from hitran.org, or a local path
+model = load_xsc(path)
+
+grid = collect(940.0:0.05:960.0)               # cm⁻¹ (the 948 cm⁻¹ SF₆ ν₃ band)
+σ    = compute_cross_section(model, grid, 1013.25, 296.0)   # hPa, K -> cm²/molecule
+```
+
 See the [API reference](@ref) for the full list of functions, keywords, and types.

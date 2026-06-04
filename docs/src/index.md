@@ -62,9 +62,10 @@ Julia 1.9+. GPU support loads automatically when `CUDA.jl` (NVIDIA) or `Metal.jl
 ## Highlights
 
 - **HITRAN & ExoMol** line lists behind a single `load_lines` interface, with on-demand
-  downloads cached and version-tracked.
-- **Voigt → speed-dependent Voigt → Hartmann-Tran** line shapes and **line mixing**, all
-  validated against [HAPI](https://hitran.org/hapi).
+  downloads cached and version-tracked — plus tabulated HITRAN `.xsc` cross-sections for
+  heavy molecules (CFCs, SF₆, …) that have no line list.
+- **Voigt → speed-dependent Voigt → Rautian → Hartmann-Tran** line shapes and **line
+  mixing**, all validated against [HAPI](https://hitran.org/hapi).
 - **Authenticated non-Voigt parameters** (Hartmann-Tran / speed-dependent / line-mixing)
   from HITRANonline.
 - **MT_CKD** water-vapor continuum and **CIA** collision-induced absorption.

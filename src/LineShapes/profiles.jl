@@ -20,6 +20,12 @@ struct Voigt <: AbstractLineProfile end
 """Speed-dependent Voigt profile (quadratic speed dependence of width/shift)."""
 struct SpeedDependentVoigt <: AbstractLineProfile end
 
+"""Rautian profile — Voigt with Dicke (velocity-changing collision) narrowing of the core."""
+struct Rautian <: AbstractLineProfile end
+
+"""Speed-dependent Rautian profile — speed dependence + Dicke narrowing, no correlation."""
+struct SpeedDependentRautian <: AbstractLineProfile end
+
 """Hartmann-Tran (HTP) profile — speed dependence + velocity-changing collisions."""
 struct HartmannTran <: AbstractLineProfile end
 

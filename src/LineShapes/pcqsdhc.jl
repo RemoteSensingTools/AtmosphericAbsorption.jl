@@ -75,11 +75,21 @@ end
     return Aterm / (FT(π) * (1 - (νVC - η * (c0 - FT(1.5) * c2)) * Aterm + η * c2 * Bterm))
 end
 
-# Uniform per-line entry points (see profiles.jl). SDV is pCqSDHC with νVC=η=0. First-
-# order (Rosenkranz) line mixing folds in as real(LS) + Y·imag(LS), reusing the complex
-# shape — free, and zero when the line list carries no mixing coefficient (Y=0).
+# Uniform per-line entry points (see profiles.jl). Each profile is pCqSDHC with a subset
+# of its terms switched off: SDV zeroes νVC and η; Rautian zeroes the speed dependence
+# (Γ2, Δ2) and correlation η; SD-Rautian keeps the speed dependence but zeroes η; HT keeps
+# all. First-order (Rosenkranz) line mixing folds in as real(LS) + Y·imag(LS), reusing the
+# complex shape — free, and zero when the line list carries no mixing coefficient (Y=0).
 @inline function evaluate(::SpeedDependentVoigt, cpf::AbstractCPF, νI::FT, ν0::FT, p) where {FT}
     LS = pcqsdhc(cpf, ν0, p.γd, p.Γ0, p.Γ2, p.Δ0, p.Δ2, zero(FT), zero(FT), νI)
+    return real(LS) + p.Y * imag(LS)
+end
+@inline function evaluate(::Rautian, cpf::AbstractCPF, νI::FT, ν0::FT, p) where {FT}
+    LS = pcqsdhc(cpf, ν0, p.γd, p.Γ0, zero(FT), p.Δ0, zero(FT), p.νVC, zero(FT), νI)
+    return real(LS) + p.Y * imag(LS)
+end
+@inline function evaluate(::SpeedDependentRautian, cpf::AbstractCPF, νI::FT, ν0::FT, p) where {FT}
+    LS = pcqsdhc(cpf, ν0, p.γd, p.Γ0, p.Γ2, p.Δ0, p.Δ2, p.νVC, zero(FT), νI)
     return real(LS) + p.Y * imag(LS)
 end
 @inline function evaluate(::HartmannTran, cpf::AbstractCPF, νI::FT, ν0::FT, p) where {FT}
