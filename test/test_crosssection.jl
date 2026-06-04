@@ -71,6 +71,35 @@ end
         @test argmax(σ) == ip                              # peak sits at the shifted center
     end
 
+    @testset "self-broadening n_self + δ_self with vmr ($FT)" for FT in (Float32, Float64)
+        # A distinct self exponent/shift plus vmr>0 exercise the VMR-weighted width/shift the
+        # air-only tests leave at unity. Matches HAPI:
+        #   Γ0 = p̃·(γa·(1-v)·(Tr/T)^na + γs·v·(Tr/T)^ns),  Δ0 = p̃·(δa·(1-v) + δs·v).
+        γa, γs, na, ns, δa, δs, v = 0.09, 0.12, 0.7, 0.5, -0.008, 0.02, 0.3
+        db = LineDatabase(; mol = Int32[2], iso = Int32[1], ν0 = FT[1000], S = FT[1e-21],
+                          E_lower = FT[0], g_upper = FT[1], γ_air = FT[γa], γ_self = FT[γs],
+                          n_air = FT[na], δ_air = FT[δa], n_self = FT[ns], δ_self = FT[δs],
+                          molar_mass = FT[44], meta = SourceMetadata("synthetic", 296.0, 1013.25))
+        T, p, Tref, pref = FT(250), FT(2 * 1013.25), FT(296), FT(1013.25)
+        pr = p / pref
+        model = LineByLineModel(db, flatpf(FT); profile = Voigt(), wing_cutoff = FT(40), vmr = FT(v))
+        Γ0 = pr * (FT(γa) * (1 - FT(v)) * (Tref / T)^FT(na) + FT(γs) * FT(v) * (Tref / T)^FT(ns))
+        Δ0 = pr * (FT(δa) * (1 - FT(v)) + FT(δs) * FT(v))
+        νs = FT(1000) + Δ0
+        grid = collect(FT, 999:FT(0.002):1001)
+        σ = compute_cross_section(model, grid, p, T)
+        c₂ = FT(AtmosphericAbsorption.Constants.C2_RAD)
+        Scorr = FT(1e-21) * (-expm1(-c₂ * FT(1000) / T)) / (-expm1(-c₂ * FT(1000) / Tref))  # E=0 ⇒ Boltz=1
+        γd = doppler_hwhm(FT, 1000, 44, 250)
+        y  = FT(SQRT_LN2) * Γ0 / γd
+        ip = argmin(abs.(grid .- νs))
+        @test isapprox(σ[ip], Scorr * voigt(HumlicekWeideman32(), grid[ip] - νs, γd, y);
+                       rtol = FT === Float64 ? 1e-10 : 1e-4)
+        @test argmax(σ) == ip
+        # The self term genuinely matters: it differs from the air-only width here.
+        @test !isapprox(Γ0, pr * FT(γa) * (Tref / T)^FT(na); rtol = 1e-3)
+    end
+
     @testset "empty grid returns empty ($FT)" for FT in (Float32, Float64)
         model = LineByLineModel(oneline_db(FT), flatpf(FT))
         @test isempty(compute_cross_section(model, FT[], 1013.25, 296.0))

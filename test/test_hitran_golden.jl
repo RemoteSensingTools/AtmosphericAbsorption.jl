@@ -27,19 +27,24 @@ end
     AtmosphericAbsorption.LineLists._HITRAN_API_KEY[] = nothing   # reset session key
 end
 
-# HAPI-style direct download from hitran.org — network-gated (skipped, not failed, offline).
+# HAPI-style direct download from hitran.org. Opt-in (set AA_NETWORK_TESTS=1) so CI does
+# not hit HITRAN's rate-limited API on every run; still skips gracefully if offline.
 @testset "HITRAN direct download (network)" begin
-    db = try
-        load_lines(HitranPort(; molecule = "CO", numin = 2100.0, numax = 2200.0);
-                   mol = 5, iso = 1, min_strength = 1e-25)
-    catch e
-        @info "HITRAN download failed (offline?) — skipping" exception = (e, catch_backtrace())
-        nothing
-    end
-    if db !== nothing
-        @test length(db) > 40
-        @test all(2100 .≤ db.ν0 .≤ 2200)
-        @test issorted(db.ν0)
+    if !haskey(ENV, "AA_NETWORK_TESTS")
+        @info "HITRAN download test skipped — set AA_NETWORK_TESTS=1 to enable"
+    else
+        db = try
+            load_lines(HitranPort(; molecule = "CO", numin = 2100.0, numax = 2200.0);
+                       mol = 5, iso = 1, min_strength = 1e-25)
+        catch e
+            @info "HITRAN download failed (offline?) — skipping" exception = (e, catch_backtrace())
+            nothing
+        end
+        if db !== nothing
+            @test length(db) > 40
+            @test all(2100 .≤ db.ν0 .≤ 2200)
+            @test issorted(db.ν0)
+        end
     end
 end
 
@@ -63,6 +68,49 @@ end
             @test maximum(abs.(σsdv .- σvgt)) / maximum(σvgt) > 1e-3   # HT params change the shape
         end
     end
+end
+
+@testset "HITRAN extended params: line mixing + self-broadening (offline golden)" begin
+    # Real CO2 4.3µm Q-branch slice with appended HT + Y + n_self/δ_self columns (carved
+    # from a HITRANonline non-Voigt fetch). Verifies the parser fills Y_LM from
+    # Y_HT_air_296 / Y_SDV_air_296 and n_self / δ_self from n_self / delta_self.
+    parse_nv = AtmosphericAbsorption.LineLists._parse_nonvoigt_data
+    path = joinpath(GOLDEN, "co2_linemix_2349_2351.data")
+    db = parse_nv(path; numin = 2349.5, numax = 2351.0, min_strength = 0.0)
+    @test count(!iszero, db.Y_LM) > 100          # most lines here carry Rosenkranz Y
+    @test all(iszero, db.n_Y_LM)                 # HITRAN ships no Y temperature exponent
+    @test count(db.n_self .!= db.n_air) > 100    # CO2 ships a distinct self T-exponent
+    @test count(!iszero, db.δ_self) > 100        # …and a self pressure shift
+
+    # Independent raw re-parse (Y_HT t8, Y_SDV t9, n_self t10, δ_self t11), ν-sorted.
+    g(t, k) = (k ≤ length(t) && !(strip(t[k]) in ("", "#"))) ? parse(Float64, t[k]) : NaN
+    raw = NamedTuple{(:ν, :Y, :ns, :ds),NTuple{4,Float64}}[]
+    for ln in eachline(path)
+        length(ln) < 160 && continue
+        t = split(ln[161:end], ',')
+        yht, ysdv = g(t, 8), g(t, 9)
+        push!(raw, (ν = parse(Float64, strip(ln[4:15])),
+                    Y = !isnan(yht) ? yht : (isnan(ysdv) ? 0.0 : ysdv),
+                    ns = g(t, 10), ds = g(t, 11)))   # all present in this golden (no fallback)
+    end
+    sort!(raw, by = r -> r.ν)
+    @test length(raw) == length(db)
+    @test maximum(abs(raw[k].Y  - db.Y_LM[k])   for k in eachindex(db.Y_LM)) == 0.0
+    @test maximum(abs(raw[k].ns - db.n_self[k]) for k in eachindex(db.n_self)) == 0.0
+    @test maximum(abs(raw[k].ds - db.δ_self[k]) for k in eachindex(db.δ_self)) == 0.0
+
+    # Line mixing must actually move the cross-section (asymmetric Q-branch redistribution).
+    db0 = AtmosphericAbsorption.LineLists.LineDatabase(; mol = db.mol, iso = db.iso, ν0 = db.ν0,
+        S = db.S, E_lower = db.E_lower, g_upper = db.g_upper, γ_air = db.γ_air, γ_self = db.γ_self,
+        n_air = db.n_air, δ_air = db.δ_air, n_self = db.n_self, δ_self = db.δ_self,
+        γ2_air = db.γ2_air, δ2_air = db.δ2_air, η = db.η,
+        νVC = db.νVC, Y_LM = zero(db.Y_LM), molar_mass = db.molar_mass, meta = db.meta)
+    grid = collect(2349.5:0.004:2351.0)
+    mk(d) = LineByLineModel(d, TIPS2017PF(); profile = SpeedDependentVoigt(), wing_cutoff = 40.0)
+    σmix = compute_cross_section(mk(db),  grid, 1013.25, 296.0)
+    σno  = compute_cross_section(mk(db0), grid, 1013.25, 296.0)
+    @test all(isfinite, σmix)
+    @test maximum(abs.(σmix .- σno)) / maximum(σno) > 1e-3
 end
 
 @testset "HITRAN cross-section vs HAPI golden" begin

@@ -34,7 +34,9 @@ struct LineDatabase{FT<:AbstractFloat}
     γ_air::Vector{FT}       # air-broadened HWHM [cm⁻¹/atm] at T_ref
     γ_self::Vector{FT}      # self-broadened HWHM [cm⁻¹/atm]
     n_air::Vector{FT}       # T-exponent of γ_air
-    δ_air::Vector{FT}       # pressure shift [cm⁻¹/atm]
+    δ_air::Vector{FT}       # air pressure shift [cm⁻¹/atm]
+    n_self::Vector{FT}      # T-exponent of γ_self (defaults to n_air)
+    δ_self::Vector{FT}      # self pressure shift [cm⁻¹/atm] (defaults to 0)
     γ2_air::Vector{FT}      # speed-dependent broadening (HT/SDV)
     δ2_air::Vector{FT}      # speed-dependent shift     (HT/SDV)
     νVC::Vector{FT}         # velocity-changing collision frequency (HT)
@@ -51,13 +53,19 @@ Base.eltype(::LineDatabase{FT}) where {FT} = FT
 
 function LineDatabase(; mol, iso, ν0, S, E_lower, g_upper,
                         γ_air, γ_self, n_air, δ_air, molar_mass, meta,
+                        n_self = nothing, δ_self = nothing,
                         γ2_air = nothing, δ2_air = nothing, νVC = nothing,
                         η = nothing, n_γ2 = nothing, Y_LM = nothing, n_Y_LM = nothing)
     FT = eltype(ν0)
     n  = length(ν0)
     col(x) = x === nothing ? zeros(FT, n) : convert(Vector{FT}, x)
+    nair = convert(Vector{FT}, n_air)
+    # No self exponent ⇒ scale the self width with the air exponent (HAPI's fallback);
+    # no self shift ⇒ zero.
+    nself = n_self === nothing ? copy(nair) : convert(Vector{FT}, n_self)
     return LineDatabase(convert(Vector{Int32}, mol), convert(Vector{Int32}, iso),
-                        ν0, S, E_lower, g_upper, γ_air, γ_self, n_air, δ_air,
+                        ν0, S, E_lower, g_upper, γ_air, γ_self, nair, δ_air,
+                        nself, col(δ_self),
                         col(γ2_air), col(δ2_air), col(νVC), col(η), col(n_γ2),
                         col(Y_LM), col(n_Y_LM), convert(Vector{FT}, molar_mass), meta)
 end

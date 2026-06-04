@@ -32,7 +32,8 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
     # possible shift so no edge line that shifts into the window is dropped; the exact
     # per-line window (istart/istop) is computed from νs below. `ν0` is sorted
     # (LineDatabase contract), so the band is found with two binary searches.
-    δmax = isempty(lines.δ_air) ? zero(FT) : abs(pratio) * maximum(abs, lines.δ_air)
+    δmax = isempty(lines.δ_air) ? zero(FT) :
+           abs(pratio) * max(maximum(abs, lines.δ_air), maximum(abs, lines.δ_self))
     νmin = FT(first(grid)) - wing_cutoff - δmax
     νmax = FT(last(grid)) + wing_cutoff + δmax
     active = searchsortedfirst(lines.ν0, νmin):searchsortedlast(lines.ν0, νmax)
@@ -47,9 +48,9 @@ function prepare(model::LineByLineModel{FT}, grid::AbstractVector,
 
     @inbounds for (k, j) in enumerate(active)
         ν0j = lines.ν0[j]
-        Δ0j = pratio * lines.δ_air[j]                                       # pressure shift
-        Γ0j = (lines.γ_air[j] * (1 - vmr) + lines.γ_self[j] * vmr) *
-              pratio * (Tref / T)^lines.n_air[j]                           # speed-averaged width
+        Δ0j = pratio * (lines.δ_air[j] * (1 - vmr) + lines.δ_self[j] * vmr) # pressure shift
+        Γ0j = pratio * (lines.γ_air[j]  * (1 - vmr) * (Tref / T)^lines.n_air[j] +
+                        lines.γ_self[j] * vmr       * (Tref / T)^lines.n_self[j]) # speed-averaged width
         key = (lines.mol[j], lines.iso[j])
         Qr  = get(Qcache, key, FT(NaN))             # NaN sentinel: never a valid ratio
         if isnan(Qr)
