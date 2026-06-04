@@ -40,6 +40,14 @@ LineByLineModel
 compute_cross_section
 ```
 
+## Interpolation tables (precomputed LUTs)
+
+```@docs
+InterpolationModel
+build_interpolation_model
+save_interpolation_model
+```
+
 ## Tabulated cross-sections (HITRAN `.xsc`)
 
 ```@docs

@@ -40,7 +40,7 @@ function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
     Ng   = length(grid)
     σ    = array_type(arch)(zeros(FT, Ng))
     Ng == 0 && return σ
-    prep = prepare(model, grid, pressure, temperature; vmr = FT(vmr))
+    prep = prepare(model, grid, pressure, temperature; vmr)
     if prep.n > 0
         gridd  = array_type(arch)(collect(FT, grid))
         kernel = _crosssection_kernel!(devi(arch))

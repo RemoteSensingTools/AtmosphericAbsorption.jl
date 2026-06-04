@@ -12,7 +12,7 @@ module Crosssections
 
 using KernelAbstractions
 using Scratch: @get_scratch!
-import Downloads
+import Downloads, Serialization
 using ..Architectures
 using ..Constants
 using ..LineShapes: AbstractLineProfile, Doppler, Lorentz, Voigt, SpeedDependentVoigt,
@@ -22,11 +22,14 @@ using ..PartitionFunctions: AbstractPartitionFunction, Q_ratio, pf_name
 using ..LineLists: LineDatabase, molecules
 
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
-       TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc
+       TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc,
+       InterpolationModel, build_interpolation_model,
+       save_interpolation_model, load_interpolation_model
 
 include("models.jl")
 include("prepare.jl")
 include("kernels.jl")
 include("xsc.jl")
+include("interpolation.jl")
 
 end # module

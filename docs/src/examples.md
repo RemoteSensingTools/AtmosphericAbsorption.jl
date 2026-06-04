@@ -167,4 +167,27 @@ grid  = collect(3800.0:0.01:3820.0)
 
 `vmr` defaults to the model's own (set at construction); `vmr=0` is pure foreign broadening. The self-broadening parameters travel on the line list — `γ_self` from any `.par`, and `n_self`/`δ_self` from the [authenticated endpoint](data_sources.md).
 
+## 9. Precomputed interpolation table for fast repeated lookups
+
+When you need the cross-section at many (pressure, temperature) points — sweeping an atmospheric profile, an inversion, a retrieval — pay the line-by-line cost once and interpolate afterwards. `build_interpolation_model` evaluates a `LineByLineModel` over a (p, T) grid and stores the cube; the resulting `InterpolationModel` answers the same `compute_cross_section` call by fast multilinear interpolation (no line work), and can be saved to disk.
+
+```julia
+using AtmosphericAbsorption
+
+lines = load_lines(HitranPort(; molecule=:CO2, numin=6300, numax=6400); mol=:CO2)
+lbl   = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
+
+grid  = collect(6300.0:0.01:6400.0)
+table = build_interpolation_model(lbl, grid,
+                                  10.0:50.0:1050.0,        # pressure nodes [hPa]
+                                  180.0:20.0:320.0)        # temperature nodes [K]
+
+σ = compute_cross_section(table, grid, 813.0, 247.0)       # fast: interpolated, no line sum
+
+save_interpolation_model("co2_band.lut", table)            # persist…
+table = load_interpolation_model("co2_band.lut")           # …and reuse later
+```
+
+At a tabulated node the table reproduces the line-by-line result exactly; between nodes it interpolates (and clamps to the table's range), so choose nodes fine enough for your accuracy. A `TabulatedCrossSection` from a HITRAN `.xsc` file (§6) is the same idea for measured panels.
+
 See the [API reference](@ref) for the full list of functions, keywords, and types.

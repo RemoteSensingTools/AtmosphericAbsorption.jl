@@ -9,6 +9,7 @@ using Test
     include("test_crosssection.jl")
     include("test_advanced_profiles.jl")
     include("test_xsc.jl")
+    include("test_interpolation.jl")
     include("test_species.jl")
     include("test_hitran_golden.jl")
     include("test_exomol.jl")

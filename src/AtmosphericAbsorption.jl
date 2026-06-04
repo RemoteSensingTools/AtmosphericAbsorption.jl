@@ -40,7 +40,9 @@ export AbstractLineListPort, LineDatabase, SourceMetadata,
        register_molecule!, register_isotopologue!, resolve_molecule, resolve_isotopologue
 # Cross-section compute core
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
-       TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc
+       TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc,
+       InterpolationModel, build_interpolation_model,
+       save_interpolation_model, load_interpolation_model
 # Continuum (CIA + MT_CKD water vapor)
 export CIATable, parse_cia_file, load_cia, cia_cross_section, cia_cross_section!,
        MTCKDTable, MTCKDBand, load_mtckd, build_mtckd_band, h2o_continuum, h2o_continuum!
