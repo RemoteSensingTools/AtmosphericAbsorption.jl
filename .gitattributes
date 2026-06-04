@@ -1,0 +1,8 @@
+# Keep the fixed-width spectroscopic files and references LF on every platform, so the
+# column parsers (.par/.data/.xsc) and readdlm (.txt goldens) behave identically on
+# Windows CI as on Linux/macOS.
+*.par   text eol=lf
+*.data  text eol=lf
+*.xsc   text eol=lf
+*.txt   text eol=lf
+*.arrow binary

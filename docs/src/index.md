@@ -56,7 +56,7 @@ grid  = collect(6300.0:0.01:6400.0)          # cm⁻¹
 pkg> add AtmosphericAbsorption
 ```
 
-Julia 1.9+. GPU support loads automatically when `CUDA.jl` (NVIDIA) or `Metal.jl`
+Julia 1.10+. GPU support loads automatically when `CUDA.jl` (NVIDIA) or `Metal.jl`
 (Apple Silicon) is available.
 
 ## Highlights
