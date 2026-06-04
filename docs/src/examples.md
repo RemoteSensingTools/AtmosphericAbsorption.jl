@@ -126,4 +126,28 @@ grid = collect(940.0:0.05:960.0)               # cm⁻¹ (the 948 cm⁻¹ SF₆ 
 σ    = compute_cross_section(model, grid, 1013.25, 296.0)   # hPa, K -> cm²/molecule
 ```
 
+## 7. Line mixing in the CO₂ 4.3 µm band
+
+The densely-packed CO₂ Q-branch is where first-order line mixing matters most. Fetch the lines with their HITRAN line-mixing coefficients (`load_hitran_nonvoigt` fills `Y_LM`), compute the cross-section with and without mixing, and compare — mixing redistributes intensity and makes the band wings fall off far faster than a plain Voigt sum. This is the recipe behind the [line-mixing figure](line_shapes.md#line-mixing-folds-in-automatically).
+
+```julia
+using AtmosphericAbsorption
+activate_hitran!("your-key")                       # line-mixing Y lives behind the authenticated endpoint
+
+db   = load_hitran_nonvoigt(:CO2; numin=2280, numax=2400, min_strength=1e-25)
+grid = collect(2280.0:0.02:2400.0)                 # cm⁻¹ (4.3 µm band)
+
+# With mixing: every collisional profile folds in Y automatically
+σ_mix = compute_cross_section(LineByLineModel(db; profile=HartmannTran(), wing_cutoff=60.0),
+                              grid, 1013.25, 296.0)
+
+# Without mixing: same lines, Y zeroed
+db0   = db[trues(length(db))]                       # copy
+db0.Y_LM .= 0
+σ_voigt = compute_cross_section(LineByLineModel(db0; profile=Voigt(), wing_cutoff=60.0),
+                                grid, 1013.25, 296.0)
+```
+
+(`load_hitran_nonvoigt` also brings the self-broadening `n_self`/`δ_self`; for CO₂ HITRAN provides the speed-dependent-Voigt line-mixing coefficient rather than a speed-dependent width, so the Hartmann-Tran result here coincides with Voigt-plus-mixing.)
+
 See the [API reference](@ref) for the full list of functions, keywords, and types.

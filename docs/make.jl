@@ -4,46 +4,18 @@ using AtmosphericAbsorption
 using AtmosphericAbsorption.LineShapes: voigt, lorentz, doppler, pcqsdhc, HumlicekWeideman32
 
 # ---------------------------------------------------------------------------
-# Minimal JSON serialization + Plotly asset writer (adapted from vSmartMOM's docs).
-# Each plot is a standalone HTML file under assets/plots/, embedded with an <iframe>.
+# Plots.jl with the plotly() backend → standalone interactive HTML per figure, embedded
+# with an <iframe>. Real plots, computed from the package (data precomputed offline where a
+# HITRAN key/network is needed, so the build stays CI-safe).
 # ---------------------------------------------------------------------------
-const PLOTLY_CDN = "https://cdn.plot.ly/plotly-2.35.2.min.js"
+using Plots
+plotly()
+default(framestyle = :box, gridalpha = 0.25, linewidth = 2, size = (820, 460),
+        fontfamily = "Inter, system-ui, sans-serif", legend = :topright)
 
-_jesc(s) = replace(string(s), "\\" => "\\\\", "\"" => "\\\"", "\n" => "\\n")
-_json(x::Nothing) = "null"
-_json(x::Bool) = x ? "true" : "false"
-_json(x::Integer) = string(x)
-_json(x::AbstractFloat) = isfinite(x) ? string(x) : "null"
-_json(x::AbstractString) = "\"" * _jesc(x) * "\""
-_json(x::Symbol) = _json(String(x))
-_json(x::AbstractVector) = "[" * join(_json.(x), ",") * "]"
-_json(x::Tuple) = "[" * join(_json.(collect(x)), ",") * "]"
-_json(x::NamedTuple) = "{" * join((_json(String(k)) * ":" * _json(v) for (k, v) in pairs(x)), ",") * "}"
-_json(x::AbstractDict) = "{" * join((_json(String(k)) * ":" * _json(v) for (k, v) in x), ",") * "}"
-
-function write_plot(name, data, layout)
-    dir = joinpath(@__DIR__, "src", "assets", "plots")
-    mkpath(dir)
-    config = (; responsive = true, displaylogo = false)
-    html = """
-    <!doctype html><html><head><meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="$PLOTLY_CDN"></script>
-    <style>html,body,#p{width:100%;height:100%;margin:0;background:#fff}</style></head>
-    <body><div id="p"></div><script>
-    Plotly.newPlot("p", $(_json(data)), $(_json(layout)), $(_json(config)));
-    </script></body></html>
-    """
-    write(joinpath(dir, name * ".html"), html)
-end
-
-trace(x, y, nm) = (; x = collect(Float64, x), y = collect(Float64, y), mode = "lines",
-                   name = nm, type = "scatter")
-axis(t) = (; title = t, showgrid = true, gridcolor = "#eee", zeroline = false)
-lay(title, xt, yt; ytype = "linear") =
-    (; title = (; text = title), xaxis = axis(xt), yaxis = merge(axis(yt), (; type = ytype)),
-     legend = (; orientation = "h", y = -0.2), margin = (; l = 70, r = 20, t = 50, b = 60),
-     font = (; family = "Inter, system-ui, sans-serif"), paper_bgcolor = "#fff", plot_bgcolor = "#fff")
+const PLOTDIR = joinpath(@__DIR__, "src", "assets", "plots")
+save_html(p, name) = (mkpath(PLOTDIR); savefig(p, joinpath(PLOTDIR, name * ".html")))
+clip(y, fl = 1e-26) = max.(y, fl)   # keep log plots positive past first-order line-mixing wing negatives
 
 # ---------------------------------------------------------------------------
 # Generated figures
@@ -53,33 +25,32 @@ function plot_lineshape_families()
     Δ = collect(-1.0:0.002:1.0)
     γd, γl = 0.08, 0.12
     y = sqrt(log(2.0)) * γl / γd
-    vg = [voigt(cpf, d, γd, y) for d in Δ]
-    lo = [lorentz(d, γl) for d in Δ]
-    dp = [doppler(d, γd) for d in Δ]
-    # speed-dependent Voigt (Γ2≠0) and Hartmann-Tran (νVC, η ≠ 0) via pcqsdhc
-    sdv = [real(pcqsdhc(cpf, 0.0, γd, γl, 0.03, 0.0, 0.0, 0.0, 0.0, d)) for d in Δ]
-    ht  = [real(pcqsdhc(cpf, 0.0, γd, γl, 0.03, 0.0, 0.0, 0.05, 0.4, d)) for d in Δ]
-    write_plot("lineshape_families",
-        [trace(Δ, dp, "Doppler"), trace(Δ, lo, "Lorentz"), trace(Δ, vg, "Voigt"),
-         trace(Δ, sdv, "Speed-dependent Voigt"), trace(Δ, ht, "Hartmann-Tran")],
-        lay("Area-normalized line-shape families (same γd, γl)", "ν − ν₀  [cm⁻¹]", "ϕ(ν)  [cm]"))
+    p = plot(; title = "Area-normalized line-shape families (same γd, γl)",
+             xlabel = "ν − ν₀  [cm⁻¹]", ylabel = "ϕ(ν)  [cm]")
+    plot!(p, Δ, [doppler(d, γd) for d in Δ]; label = "Doppler")
+    plot!(p, Δ, [lorentz(d, γl) for d in Δ]; label = "Lorentz")
+    plot!(p, Δ, [voigt(cpf, d, γd, y) for d in Δ]; label = "Voigt")
+    plot!(p, Δ, [real(pcqsdhc(cpf, 0.0, γd, γl, 0.03, 0.0, 0.0, 0.0, 0.0, d)) for d in Δ]; label = "Speed-dependent Voigt")
+    plot!(p, Δ, [real(pcqsdhc(cpf, 0.0, γd, γl, 0.03, 0.0, 0.0, 0.05, 0.4, d)) for d in Δ]; label = "Hartmann-Tran")
+    save_html(p, "lineshape_families")
 end
 
-function plot_co2_crosssection()
+# CO2 1.6 µm band at three temperatures — line strengths and widths shift with T.
+function plot_temperature()
     par = joinpath(@__DIR__, "..", "test", "golden", "co2_6300_6400_p500_T250.par")
-    db = load_lines(HitranPort(par); mol = :CO2, iso = :main, min_strength = 1e-26)
+    db    = load_lines(HitranPort(par); mol = :CO2, iso = :main, min_strength = 1e-26)
     model = LineByLineModel(db; profile = Voigt(), wing_cutoff = 40.0)   # partition rides on db
-    grid = collect(6300.0:0.01:6400.0)
-    σ250 = compute_cross_section(model, grid, 500.0, 250.0)
-    σ296 = compute_cross_section(model, grid, 500.0, 296.0)
-    write_plot("co2_crosssection",
-        [trace(grid, σ296, "296 K"), trace(grid, σ250, "250 K")],
-        lay("CO₂ absorption cross-section, 1.6 µm band (p = 500 hPa)",
-            "wavenumber  [cm⁻¹]", "σ  [cm²/molecule]"; ytype = "log"))
+    grid  = collect(6300.0:0.02:6400.0)
+    p = plot(; title = "CO₂ 1.6 µm band vs temperature (p = 500 hPa)", yscale = :log10,
+             xlabel = "wavenumber  [cm⁻¹]", ylabel = "σ  [cm²/molecule]", ylims = (1e-26, 1e-21))
+    for T in (296.0, 250.0, 220.0)
+        plot!(p, grid, clip(compute_cross_section(model, grid, 500.0, T)); label = "$(Int(T)) K")
+    end
+    save_html(p, "co2_temperature")
 end
 
-# Read a committed cross-section overlay (cols: ν, σ_a, σ_b). Generated offline by
-# benchmark/gen_exomol_fig.jl so the doc build needs no network (CI-safe).
+# Read a committed cross-section overlay (cols: ν, σ_a, σ_b). Generated offline by the
+# benchmark/gen_*.jl scripts so the doc build needs no network/HITRAN key (CI-safe).
 function read_xsec(name)
     nu, a, b = Float64[], Float64[], Float64[]
     for ln in eachline(joinpath(@__DIR__, "src", "assets", name))
@@ -94,30 +65,45 @@ end
 # ExoMol vs HITRAN CO cross-section — ExoMol derives line strengths from Einstein-A
 # coefficients + its own partition function, yet lands on top of HITRAN.
 function plot_exomol_co()
-    nu, σe, σh = read_xsec("exomol_co_xsec.txt")
-    te = (; x = nu, y = σe, mode = "lines", type = "scatter",
-          name = "ExoMol Li2015 (S from Einstein-A)", line = (; color = "#1f77b4", width = 2))
-    th = (; x = nu, y = σh, mode = "lines", type = "scatter",
-          name = "HITRAN", line = (; color = "#d62728", width = 2, dash = "dot"))
-    write_plot("exomol_co_xsec", [te, th],
-        lay("CO cross-section — ExoMol vs HITRAN (p = 1013 hPa, T = 296 K)",
-            "wavenumber  [cm⁻¹]", "σ  [cm²/molecule]"; ytype = "log"))
+    ν, σe, σh = read_xsec("exomol_co_xsec.txt")
+    p = plot(; title = "CO cross-section — ExoMol vs HITRAN (p = 1013 hPa, T = 296 K)", yscale = :log10,
+             xlabel = "wavenumber  [cm⁻¹]", ylabel = "σ  [cm²/molecule]")
+    plot!(p, ν, clip(σe); label = "ExoMol Li2015 (S from Einstein-A)")
+    plot!(p, ν, clip(σh); label = "HITRAN", linestyle = :dot)
+    save_html(p, "exomol_co_xsec")
+end
+
+# CO2 4.3 µm band: first-order line mixing redistributes intensity between overlapping
+# lines and suppresses the far wings (sub-Lorentzian) vs a plain Voigt sum.
+function plot_co2_linemix()
+    ν, σno, σlm = read_xsec("co2_linemix_band.txt")
+    p = plot(; title = "CO₂ 4.3 µm band — effect of line mixing (p = 1013 hPa, T = 296 K)", yscale = :log10,
+             xlabel = "wavenumber  [cm⁻¹]", ylabel = "σ  [cm²/molecule]")
+    plot!(p, ν, clip(σno); label = "Voigt (no line mixing)")
+    plot!(p, ν, clip(σlm); label = "with line mixing (Hartmann-Tran)")
+    save_html(p, "co2_linemix")
+end
+
+# H2O: the speed dependence of collisions (Hartmann-Tran γ₂/ν_VC) narrows and reshapes the
+# line cores relative to a plain Voigt.
+function plot_h2o_ht()
+    ν, σv, σht = read_xsec("h2o_voigt_vs_ht.txt")
+    p = plot(; title = "H₂O speed dependence — Voigt vs Hartmann-Tran (p = 1013 hPa, T = 250 K)", yscale = :log10,
+             xlabel = "wavenumber  [cm⁻¹]", ylabel = "σ  [cm²/molecule]")
+    plot!(p, ν, clip(σv);  label = "Voigt")
+    plot!(p, ν, clip(σht); label = "Hartmann-Tran (γ₂, ν_VC)", linestyle = :dash)
+    save_html(p, "h2o_voigt_vs_ht")
 end
 
 function plot_benchmark()
     cut = ["2.5", "5", "10", "25", "full"]
-    hapi2 = [114.0, 173.0, 286.0, 623.0, 4691.0]
-    cpu   = [177.0, 235.0, 349.0, 683.0, 4122.0]
-    gpu   = [2.1, 2.2, 2.4, 3.0, 10.1]
-    bar(y, nm) = (; x = cut, y = y, type = "bar", name = nm)
-    write_plot("benchmark",
-        [bar(hapi2, "hapi2 (numba)"), bar(cpu, "AtmosphericAbsorption CPU"),
-         bar(gpu, "AtmosphericAbsorption GPU")],
-        (; title = (; text = "Time vs wing cutoff — 4000 lines × 400 cm⁻¹ band (A100)"),
-         barmode = "group", xaxis = axis("wing cutoff  [cm⁻¹]"),
-         yaxis = merge(axis("time  [ms]"), (; type = "log")),
-         legend = (; orientation = "h", y = -0.2), margin = (; l = 70, r = 20, t = 50, b = 60),
-         font = (; family = "Inter, system-ui, sans-serif"), paper_bgcolor = "#fff", plot_bgcolor = "#fff"))
+    x = 1:5
+    p = plot(; title = "Time vs wing cutoff — 4000 lines × 400 cm⁻¹ band (A100)", yscale = :log10,
+             xlabel = "wing cutoff  [cm⁻¹]", ylabel = "time  [ms]", xticks = (x, cut), marker = :circle)
+    plot!(p, x, [114.0, 173.0, 286.0, 623.0, 4691.0]; label = "hapi2 (numba)")
+    plot!(p, x, [177.0, 235.0, 349.0, 683.0, 4122.0]; label = "AtmosphericAbsorption CPU")
+    plot!(p, x, [2.1, 2.2, 2.4, 3.0, 10.1]; label = "AtmosphericAbsorption GPU")
+    save_html(p, "benchmark")
 end
 
 # Generate the species/isotopologue reference table from the bundled data + registry, so
@@ -148,10 +134,12 @@ end
 
 @info "Generating documentation figures…"
 plot_lineshape_families()
-plot_co2_crosssection()
-write_isotopologue_table()
+plot_temperature()
+plot_co2_linemix()
+plot_h2o_ht()
 plot_exomol_co()
 plot_benchmark()
+write_isotopologue_table()
 
 const REPO = "github.com/RemoteSensingTools/AtmosphericAbsorption.jl"
 const IN_CI = get(ENV, "CI", "false") == "true"

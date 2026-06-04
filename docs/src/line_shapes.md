@@ -48,6 +48,10 @@ Velocity-changing collisions confine a molecule's motion, narrowing the Doppler 
 
 The Hartmann-Tran profile (the partially-correlated quadratic speed-dependent hard-collision model, **pCqSDHC**) adds velocity-changing (Dicke narrowing) collisions on top of the speed dependence. It is the most complete line shape in routine use and is recommended when matching reference codes at the highest accuracy. Select it with `HartmannTran()`. It consumes the full set of advanced columns (γ₂, δ₂, η, ν_VC).
 
+The plot below overlays Voigt and Hartmann-Tran for a slice of the H₂O ν₃ band (real HITRAN HT parameters): the speed dependence subtly narrows and reshapes the line cores — a small but real difference that matters for high-accuracy retrievals.
+
+<iframe title="H2O Voigt vs Hartmann-Tran" src="assets/plots/h2o_voigt_vs_ht.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
+
 ## Getting the advanced parameters
 
 `Doppler()`, `Lorentz()`, and `Voigt()` run from a standard HITRAN or ExoMol line list. `SpeedDependentVoigt()` and `HartmannTran()` need the extra Hartmann-Tran columns, which come from HITRAN's authenticated non-Voigt API:
@@ -64,6 +68,10 @@ This fills the database's advanced columns (`γ2_air`, `δ2_air`, `η`, `νVC`),
 Voigt, Lorentz, speed-dependent Voigt, and Hartmann-Tran are **collisional** profiles: wherever a line carries a first-order (Rosenkranz) line-mixing coefficient `Y_LM`, they fold it in automatically as the asymmetric `Y·Im(W)` term. Line mixing matters where neighboring lines overlap strongly (CO₂ Q-branches, O₂ A-band), redistributing intensity between the lines and reshaping the band envelope. You do not enable it separately — the fold is built into the collisional profiles and switches on for exactly those lines whose `Y_LM` is non-zero.
 
 `Y_LM` is filled from HITRAN's line-mixing parameters (`Y_HT_air_296` / `Y_SDV_air_296`) through the authenticated non-Voigt endpoint (see [Data sources](data_sources.md) §3) — currently provided by HITRAN for CO₂, O₂, and a few others. A basic Voigt `.par` load leaves `Y_LM` at zero, so no mixing is applied there. `Doppler()`, being the zero-pressure limit, carries no line mixing.
+
+The effect is dramatic across the CO₂ 4.3 µm band: mixing redistributes intensity between the densely-overlapping lines and makes the band wings fall off far faster than a plain Voigt sum (the well-known sub-Lorentzian behavior). For CO₂, HITRAN supplies the speed-dependent-Voigt line-mixing coefficient (no `γ₂`), so the Hartmann-Tran curve below coincides with "Voigt + line mixing".
+
+<iframe title="CO2 line mixing" src="assets/plots/co2_linemix.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
 
 ## Swapping profiles on the same line list
 

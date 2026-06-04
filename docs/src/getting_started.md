@@ -72,11 +72,11 @@ grid = collect(6300.0:0.01:6400.0)               # cm⁻¹
 σ    = compute_cross_section(model, grid, 500.0, 250.0)   # cm²/molecule
 ```
 
-`σ` is a `Vector` the same length as `grid`, giving the absorption cross-section in **cm²/molecule** at each wavenumber. The line strengths are automatically scaled from their 296 K reference values to 250 K using the model's partition function, so you do not have to apply any temperature correction yourself.
+`σ` is a `Vector` the same length as `grid`, giving the absorption cross-section in **cm²/molecule** at each wavenumber. The line strengths are automatically scaled from their 296 K reference values to the requested temperature using the model's partition function, so you do not have to apply any temperature correction yourself. The interactive plot below shows the same band at three temperatures — drag to zoom, hover to read off values.
 
-<iframe title="CO2 cross-section" src="assets/plots/co2_crosssection.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
+<iframe title="CO2 vs temperature" src="assets/plots/co2_temperature.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
 
-The forest of peaks is the CO₂ line manifold in this band; each line is broadened by pressure (Lorentz wings) and temperature (Doppler core), which the Voigt profile combines. Lower the pressure and the lines sharpen toward their Doppler limit; raise it and they broaden and blend.
+The forest of peaks is the CO₂ line manifold in this band; each line is broadened by pressure (Lorentz wings) and temperature (Doppler core), which the Voigt profile combines. As the temperature drops the population redistributes over the rotational states — low-energy lines strengthen, high-energy ones weaken — and the Doppler cores narrow.
 
 ## Loading from a local `.par` file
 
