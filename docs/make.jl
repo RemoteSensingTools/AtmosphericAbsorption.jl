@@ -67,8 +67,8 @@ end
 
 function plot_co2_crosssection()
     par = joinpath(@__DIR__, "..", "test", "golden", "co2_6300_6400_p500_T250.par")
-    db = load_lines(HitranPort(par); mol = 2, iso = 1, min_strength = 1e-26)
-    model = LineByLineModel(db, TIPS2017PF(); profile = Voigt(), wing_cutoff = 40.0)
+    db = load_lines(HitranPort(par); mol = :CO2, iso = :main, min_strength = 1e-26)
+    model = LineByLineModel(db; profile = Voigt(), wing_cutoff = 40.0)   # partition rides on db
     grid = collect(6300.0:0.01:6400.0)
     σ250 = compute_cross_section(model, grid, 500.0, 250.0)
     σ296 = compute_cross_section(model, grid, 500.0, 296.0)
@@ -120,9 +120,36 @@ function plot_benchmark()
          font = (; family = "Inter, system-ui, sans-serif"), paper_bgcolor = "#fff", plot_bgcolor = "#fff"))
 end
 
+# Generate the species/isotopologue reference table from the bundled data + registry, so
+# the docs page stays in sync with the code that resolves :CO2 / :main / formulas.
+function write_isotopologue_table()
+    csv = joinpath(@__DIR__, "..", "data", "hitran_isotopologues.csv")
+    rows = sort!([(mol = parse(Int, a[1]), iso = parse(Int, a[2]), formula = a[3])
+                  for ln in eachline(csv) if !startswith(ln, "mol")
+                  for a in (split(strip(ln), ','),) if length(a) ≥ 3], by = r -> (r.mol, r.iso))
+    fmt(f) = try string(round(f(); sigdigits = 5)) catch; "—" end
+    io = IOBuffer()
+    println(io, "# Species & isotopologues\n")
+    println(io, "Every molecule below can be named with the [species notation](data_sources.md#species-notation) — ",
+                "`mol = :CO2` / `\"CO2\"` / `2`, and isotopologues with `iso = :main` / an id / `:ALL`. ",
+                "The mapping is overridable with `register_molecule!` / `register_isotopologue!`. ",
+                "Molar mass / abundance are blank for the heavy molecules that ship only as ",
+                "[tabulated cross-sections](data_sources.md).\n")
+    println(io, "| id | molecule | iso | isotopologue | molar mass [g/mol] | abundance |")
+    println(io, "|---:|:---------|----:|:-------------|-------------------:|----------:|")
+    for r in rows
+        sym = string(AtmosphericAbsorption.molecule_symbol(r.mol))
+        mm  = fmt(() -> AtmosphericAbsorption.LineLists.molar_mass(r.mol, r.iso))
+        ab  = fmt(() -> AtmosphericAbsorption.LineLists.abundance(r.mol, r.iso))
+        println(io, "| $(r.mol) | `:$sym` | $(r.iso) | `$(r.formula)` | $mm | $ab |")
+    end
+    write(joinpath(@__DIR__, "src", "isotopologues.md"), String(take!(io)))
+end
+
 @info "Generating documentation figures…"
 plot_lineshape_families()
 plot_co2_crosssection()
+write_isotopologue_table()
 plot_exomol_co()
 plot_benchmark()
 
@@ -149,6 +176,7 @@ makedocs(;
         "Getting started" => "getting_started.md",
         "Line shapes" => "line_shapes.md",
         "Data sources" => "data_sources.md",
+        "Species & isotopologues" => "isotopologues.md",
         "Continuum" => "continuum.md",
         "GPU & precision" => "gpu.md",
         "Benchmarks" => "benchmarks.md",

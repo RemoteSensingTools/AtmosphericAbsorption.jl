@@ -24,8 +24,8 @@ GPU acceleration is optional and loads automatically when you bring in the relev
 
 Computing a cross-section is a three-step pipeline:
 
-1. **Get a line list.** A *Port* points at a data source — a HITRAN `.par` file, a download from hitran.org, or an ExoMol line list. `load_lines(port)` reads it into a `LineDatabase`. Each port also gives you a matching `partition_function`.
-2. **Build a model.** `LineByLineModel` bundles the line list, its partition function, a line-shape `profile` (Voigt by default), and numerical choices (wing cutoff, broadener VMR, architecture).
+1. **Get a line list.** A *Port* points at a data source — a HITRAN `.par` file, a download from hitran.org, or an ExoMol line list. `load_lines(port)` reads it into a `LineDatabase`, with the right partition function attached automatically (TIPS-2021 for HITRAN, the ExoMol `.pf` for ExoMol). Molecules are named with the [species notation](data_sources.md#species-notation) (`mol=:CO2`).
+2. **Build a model.** `LineByLineModel(lines; …)` bundles the line list (and its partition function), a line-shape `profile` (Voigt by default), and numerical choices (wing cutoff, broadener VMR, architecture).
 3. **Evaluate it.** `compute_cross_section(model, grid, pressure, temperature)` returns the cross-section sampled on your wavenumber grid.
 
 ```
@@ -59,14 +59,13 @@ Let's download CO₂ from hitran.org over 6300–6400 cm⁻¹ and compute its cr
 using AtmosphericAbsorption
 
 # 1. A Port that fetches CO2 lines from hitran.org for our spectral window
-port = HitranPort(; molecule="CO2", numin=6300, numax=6400, edition="HITRAN2020")
+port = HitranPort(; molecule=:CO2, numin=6300, numax=6400, edition="HITRAN2020")
 
-# 2. Read the lines and grab the matching partition function
-lines = load_lines(port)                         # -> LineDatabase{Float64}
-pf    = partition_function(port, 2, 1)           # CO2 is HITRAN molecule 2, isotopologue 1
+# 2. Read the lines (the partition function rides along on the LineDatabase)
+lines = load_lines(port)                         # -> LineDatabase, partition attached
 
 # 3. Build the line-by-line model (Voigt profile by default)
-model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0)
+model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
 
 # 4. Evaluate on a 0.01 cm⁻¹ grid at p = 500 hPa, T = 250 K
 grid = collect(6300.0:0.01:6400.0)               # cm⁻¹
@@ -89,10 +88,11 @@ using AtmosphericAbsorption
 # A Port backed by a local HITRAN .par file
 port = HitranPort("CO2.par"; edition="HITRAN2016")
 
-lines = load_lines(port; ν_min=6300, ν_max=6400, min_strength=0.0)
-pf    = partition_function(port, 2, 1)
+lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400, min_strength=0.0)
 
-model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0)
+model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
+# To pin a specific partition edition (e.g. to reproduce HAPI), pass it explicitly:
+#   LineByLineModel(lines, TIPS2017PF(); profile=Voigt())
 
 grid = collect(6300.0:0.01:6400.0)
 σ    = compute_cross_section(model, grid, 500.0, 250.0)

@@ -4,17 +4,16 @@ A cookbook of short, end-to-end recipes. Each example is self-contained and runs
 
 ## 1. HITRAN CO₂ at 1.6 µm
 
-Download the CO₂ lines for the 1.6 µm band directly from hitran.org (public, no API key), build a Voigt line-by-line model, and compute the cross-section on a fine grid. The `HitranPort` keyword form fetches the `.par` file; `load_lines` reads it into a `LineDatabase`, and `partition_function` supplies the iso-aware latest-edition (TIPS-2021) partition sums.
+Download the CO₂ lines for the 1.6 µm band directly from hitran.org (public, no API key), build a Voigt line-by-line model, and compute the cross-section on a fine grid. The `HitranPort` keyword form fetches the `.par` file and `load_lines` reads it into a `LineDatabase` with the latest-edition (TIPS-2021) partition function already attached, so `LineByLineModel(lines)` needs nothing more.
 
 ```julia
 using AtmosphericAbsorption
 
 # 6300–6400 cm⁻¹ is the 1.6 µm CO₂ band
-port  = HitranPort(; molecule="CO2", numin=6300, numax=6400, edition="HITRAN2020")
-lines = load_lines(port; mol=2, iso=1, ν_min=6300, ν_max=6400)
-pf    = partition_function(port, 2, 1)        # TIPS2021PF (latest)
+port  = HitranPort(; molecule=:CO2, numin=6300, numax=6400, edition="HITRAN2020")
+lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)
 
-model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0)
+model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)   # partition rides on lines
 
 grid = collect(6320.0:0.01:6340.0)            # cm⁻¹
 σ    = compute_cross_section(model, grid, 1013.25, 296.0)   # hPa, K -> cm²/molecule
@@ -22,16 +21,15 @@ grid = collect(6320.0:0.01:6340.0)            # cm⁻¹
 
 ## 2. ExoMol CO fundamental band (and a HITRAN cross-check)
 
-`ExoMolPort` downloads a line list from exomol.com. Unlike HITRAN, ExoMol stores Einstein-A coefficients rather than precomputed line intensities, so `load_lines` derives each line strength on the fly from the Einstein-A coefficient and the ExoMol partition function. Pass the HITRAN molecule/isotopologue IDs so the species can be cross-referenced; `partition_function` returns a `TabulatedPF` built from the ExoMol `.pf` file. Here we compute the CO fundamental band near 4.7 µm.
+`ExoMolPort` downloads a line list from exomol.com. Unlike HITRAN, ExoMol stores Einstein-A coefficients rather than precomputed line intensities, so `load_lines` derives each line strength on the fly from the Einstein-A coefficient and the ExoMol partition function — which it then attaches to the returned `LineDatabase` (as a `TabulatedPF`), so the model uses the consistent `.pf` automatically. Pass the HITRAN molecule/isotopologue IDs so the species can be cross-referenced. Here we compute the CO fundamental band near 4.7 µm.
 
 ```julia
 using AtmosphericAbsorption
 
-port  = ExoMolPort("CO", "12C-16O", "Li2015"; hitran_mol=5, hitran_iso=1)
-lines = load_lines(port; ν_min=2000, ν_max=2250)
-pf    = partition_function(port, 5, 1)        # TabulatedPF from the ExoMol .pf
+port  = ExoMolPort(:CO, "12C-16O", "Li2015"; hitran_mol=5, hitran_iso=1)
+lines = load_lines(port; ν_min=2000, ν_max=2250)   # the ExoMol .pf rides on lines.partition
 
-model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0)
+model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
 
 grid = collect(2000.0:0.01:2250.0)            # cm⁻¹
 σ    = compute_cross_section(model, grid, 1013.25, 296.0)
@@ -41,10 +39,9 @@ Because ExoMol and HITRAN encode line intensities completely differently, comput
 
 ```julia
 # Same band, same physics, from HITRAN instead of ExoMol
-hport = HitranPort(; molecule="CO", numin=2000, numax=2250, edition="HITRAN2020")
-hlines = load_lines(hport; mol=5, iso=1, ν_min=2000, ν_max=2250)
-hpf    = partition_function(hport, 5, 1)       # TIPS2021PF (latest)
-hmodel = LineByLineModel(hlines, hpf; profile=Voigt(), wing_cutoff=40.0)
+hport = HitranPort(; molecule=:CO, numin=2000, numax=2250, edition="HITRAN2020")
+hlines = load_lines(hport; mol=:CO, ν_min=2000, ν_max=2250)
+hmodel = LineByLineModel(hlines; profile=Voigt(), wing_cutoff=40.0)
 
 σ_exomol = compute_cross_section(model,  grid, 1013.25, 296.0)
 σ_hitran = compute_cross_section(hmodel, grid, 1013.25, 296.0)
@@ -69,10 +66,9 @@ using AtmosphericAbsorption
 
 activate_hitran!("your-key")                  # or set ENV["HITRAN_API_KEY"]
 
-db = load_hitran_nonvoigt("H2O"; numin=3700, numax=3850, min_strength=0.0)
-pf = partition_function(HitranPort(; molecule="H2O", numin=3700, numax=3850), 1, 1)
+db = load_hitran_nonvoigt(:H2O; numin=3700, numax=3850, min_strength=0.0)
 
-model = LineByLineModel(db, pf; profile=SpeedDependentVoigt(), wing_cutoff=40.0)
+model = LineByLineModel(db; profile=SpeedDependentVoigt(), wing_cutoff=40.0)
 
 grid = collect(3700.0:0.005:3850.0)           # cm⁻¹
 σ    = compute_cross_section(model, grid, 1013.25, 296.0)
@@ -86,11 +82,10 @@ The pipeline runs on NVIDIA CUDA (`GPU()`), Apple Metal (`MetalGPU()`, Float32 o
 using AtmosphericAbsorption
 using CUDA                                     # loads the GPU backend
 
-port  = HitranPort(; molecule="CO2", numin=6300, numax=6400, edition="HITRAN2020")
-lines = load_lines(port; mol=2, iso=1, ν_min=6300, ν_max=6400, FT=Float32)
-pf    = partition_function(port, 2, 1)
+port  = HitranPort(; molecule=:CO2, numin=6300, numax=6400, edition="HITRAN2020")
+lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400, FT=Float32)
 
-model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0,
+model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0,
                         architecture=GPU())
 
 grid  = collect(Float32, 6320.0:0.01:6340.0)   # cm⁻¹

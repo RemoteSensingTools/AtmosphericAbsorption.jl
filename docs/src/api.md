@@ -10,7 +10,6 @@ CurrentModule = AtmosphericAbsorption
 LineDatabase
 SourceMetadata
 load_lines
-partition_function
 source_metadata
 HitranPort
 fetch_hitran
@@ -18,6 +17,20 @@ ExoMolPort
 activate_hitran!
 fetch_hitran_nonvoigt
 load_hitran_nonvoigt
+```
+
+## Species notation
+
+Name molecules and isotopologues with the backend-agnostic notation (see the
+[Species & isotopologues](isotopologues.md) table); the mapping is overridable.
+
+```@docs
+molecules
+molecule_number
+molecule_symbol
+isotopologue
+register_molecule!
+register_isotopologue!
 ```
 
 ## Cross-section model
@@ -54,14 +67,19 @@ AtmosphericAbsorption.LineShapes.HumlicekWeideman32
 AtmosphericAbsorption.LineShapes.ErfcxCPF
 ```
 
-## Partition functions
+## Partition functions (advanced)
+
+Normally the partition function rides on the `LineDatabase` (set by the port) and the
+model picks it up automatically — you only reach for these to pin a specific edition.
 
 ```@docs
+partition_function
 AbstractPartitionFunction
 TIPS2021PF
 TIPS2017PF
 TabulatedPF
 Q_ratio
+pf_name
 ```
 
 ## Continuum
