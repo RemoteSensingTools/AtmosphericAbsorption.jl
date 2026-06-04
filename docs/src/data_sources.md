@@ -1,0 +1,110 @@
+# Data sources
+
+AtmosphericAbsorption.jl reads spectroscopic line lists from several providers — HITRAN and ExoMol — through a single abstraction called a **Port**. A Port knows how to locate, download, cache, and parse one kind of data source. Whatever the origin, `load_lines` returns a uniform `LineDatabase`, so the rest of the pipeline (partition functions, line shapes, cross-sections) is identical regardless of where the lines came from.
+
+```julia
+port  = HitranPort("CO2.par"; edition="HITRAN2016")
+lines = load_lines(port; ν_min=6300, ν_max=6400)   # -> LineDatabase{Float64}
+pf    = partition_function(port, 2, 1)              # TIPS2017PF for HITRAN
+```
+
+Downloads are written to a scratch cache and never re-fetched if already present. Alongside each cached artifact, a `.meta.toml` records its provenance — source, molecule, isotopologue, spectral window, edition/version — so a result can always be traced back to the exact data that produced it. `source_metadata(port, mol, iso)` returns this information programmatically.
+
+## 1. HITRAN from a local `.par` file
+
+If you already have a HITRAN `.par` file, wrap it in a `HitranPort` and load. The `edition` keyword records which HITRAN edition the file came from (it is provenance metadata, not a download trigger).
+
+```julia
+using AtmosphericAbsorption
+
+port  = HitranPort("CO2.par"; edition="HITRAN2016")
+lines = load_lines(port; mol=2, iso=1, ν_min=6300, ν_max=6400, min_strength=0.0)
+pf    = partition_function(port, 2, 1)   # TIPS2017PF(), isotopologue-aware
+```
+
+`load_lines` accepts windowing and filtering keywords:
+
+- `mol`, `iso` — select a molecule / isotopologue ID (`-1` keeps all).
+- `ν_min`, `ν_max` — spectral window in cm⁻¹.
+- `min_strength` — drop lines weaker than this threshold (cm⁻¹/(molecule·cm⁻²)).
+- `FT` — element type of the returned line list, `Float64` (default) or `Float32`.
+
+## 2. HITRAN direct download
+
+To fetch lines straight from hitran.org, construct a `HitranPort` with keyword arguments instead of a file path. The line list is downloaded once into the scratch cache (with a `.meta.toml` alongside) and reused thereafter; pass `force=true` to re-download. This endpoint is public and needs no API key.
+
+```julia
+using AtmosphericAbsorption
+
+port  = HitranPort(; molecule="CO2", numin=6300, numax=6400, edition="HITRAN2020")
+lines = load_lines(port)
+pf    = partition_function(port, 2, 1)
+```
+
+If you only want the raw `.par` on disk, `fetch_hitran` downloads it and returns the file path:
+
+```julia
+path = fetch_hitran("CO2"; numin=6300, numax=6400, edition="HITRAN2020")
+```
+
+The default HITRAN download provides the standard Voigt line parameters (air/self half-widths, pressure shifts, temperature exponents, and line-mixing). For the speed-dependent and Hartmann–Tran parameters, use the authenticated endpoint below.
+
+## 3. HITRAN authenticated NON-Voigt parameters
+
+HITRAN's advanced line-shape parameters — speed-dependent broadening, Hartmann–Tran, and full line-mixing — live behind an authenticated endpoint. You need a free API key from your profile page on hitran.org.
+
+The key is held in memory only for the duration of your session. It is never written to disk and must never be committed to a repository. Provide it one of two ways:
+
+```julia
+using AtmosphericAbsorption
+
+# Option A: activate explicitly (key kept in memory only, never stored)
+activate_hitran!("your-key")
+
+# Option B: set the environment variable before starting Julia
+#   export HITRAN_API_KEY="your-key"
+```
+
+With the key active, `load_hitran_nonvoigt` fetches the advanced parameters and fills the corresponding columns of the `LineDatabase` (`γ2_air`, `δ2_air`, `η`, `νVC`):
+
+```julia
+db = load_hitran_nonvoigt("H2O"; numin=3700, numax=3850, min_strength=0.0, FT=Float64)
+```
+
+To actually use those parameters, choose a non-Voigt profile when building the model — `SpeedDependentVoigt()` for speed-dependent broadening, or `HartmannTran()` for the full Hartmann–Tran profile:
+
+```julia
+pf    = partition_function(HitranPort(; molecule="H2O", numin=3700, numax=3850), 1, 1)
+model = LineByLineModel(db, pf; profile=HartmannTran(), wing_cutoff=40.0)
+
+grid  = collect(3700.0:0.01:3850.0)      # cm⁻¹
+σ     = compute_cross_section(model, grid, 1013.25, 296.0)   # p[hPa], T[K]
+```
+
+These advanced profiles reproduce HAPI's reference `pcqsdhc` evaluation to ~1e-6.
+
+## 4. ExoMol
+
+ExoMol line lists are loaded through an `ExoMolPort`. ExoMol stores transitions with Einstein-A coefficients rather than precomputed intensities, so line strengths are computed on the fly from the Einstein-A coefficient and the ExoMol partition function. The `hitran_mol` / `hitran_iso` keywords map the ExoMol species onto the corresponding HITRAN molecule and isotopologue IDs, so the downstream pipeline is unchanged.
+
+```julia
+using AtmosphericAbsorption
+
+port  = ExoMolPort("CO", "12C-16O", "Li2015"; hitran_mol=5, hitran_iso=1)
+lines = load_lines(port; ν_min=2000, ν_max=2200)
+pf    = partition_function(port, 5, 1)    # TabulatedPF from the ExoMol .pf file
+```
+
+Pair the port with its own `partition_function` — for ExoMol this returns a `TabulatedPF` built from the ExoMol `.pf` file, which is the partition function used to derive the intensities. Computed ExoMol intensities agree with HITRAN to better than 0.05% for CO.
+
+ExoMol `.trans` files can be enormous (often gigabytes). They are streamed and windowed during loading rather than read into memory all at once, so requesting a narrow `ν_min`/`ν_max` window keeps the footprint small. As with HITRAN, the download is cached in scratch with a `.meta.toml` recording the species, line-list name (`"Li2015"` above), and spectral window for full provenance.
+
+```julia
+model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0)
+grid  = collect(2000.0:0.01:2200.0)                     # cm⁻¹
+σ     = compute_cross_section(model, grid, 1013.25, 296.0)   # cm²/molecule
+```
+
+## Provenance and reproducibility
+
+Every cached artifact carries a `.meta.toml` sidecar recording its source, molecule/isotopologue, spectral window, and edition or line-list version. This lets you confirm — months later, or on another machine — exactly which spectroscopic data underlies a cross-section, and is the recommended way to track data versions in reproducible workflows. Query it at runtime with `source_metadata(port, mol, iso)`.

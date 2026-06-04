@@ -1,1 +1,6 @@
 /Manifest.toml
+/docs/build/
+/docs/node_modules/
+/docs/src/assets/plots/
+/docs/package-lock.json
+/docs/Manifest.toml
