@@ -1,8 +1,7 @@
 using AtmosphericAbsorption.LineShapes: pcqsdhc, voigt, HumlicekWeideman32, ErfcxCPF
 using DelimitedFiles: readdlm
 using JET
-
-const GOLDEN = joinpath(@__DIR__, "golden")
+# GOLDEN (the reference_data artifact's golden dir) comes from runtests.jl.
 
 # name => (Γ0, Γ2, Δ0, Δ2, νVC, η, Ylm); goldens from generate_pcqsdhc_golden.py (HAPI).
 # The "htlm" case carries first-order line mixing; golden col2 = real(LS) + Ylm·imag(LS).

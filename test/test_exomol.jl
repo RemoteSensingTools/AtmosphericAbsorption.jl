@@ -4,7 +4,7 @@ using AtmosphericAbsorption.LineLists: parse_def, read_states, read_pf, read_bro
 using Test
 
 const FIX = joinpath(@__DIR__, "fixtures", "exomol")
-const COPAR = joinpath(@__DIR__, "golden", "co_2100_2200.par")
+# COPAR (the HITRAN CO golden) comes from runtests.jl via the reference_data artifact.
 
 @testset "ExoMol readers (synthetic fixtures)" begin
     def = parse_def(joinpath(FIX, "toy.def"))

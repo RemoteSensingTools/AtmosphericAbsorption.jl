@@ -1,8 +1,7 @@
 using AtmosphericAbsorption
 using AtmosphericAbsorption.LineLists: resolve_molecule, resolve_isotopologue, molar_mass
 using Test
-
-const COPAR = joinpath(@__DIR__, "golden", "co_2100_2200.par")
+# COPAR (the HITRAN CO golden) comes from runtests.jl via the reference_data artifact.
 
 @testset "species registry + resolvers" begin
     # molecule: symbol ≡ string ≡ integer; :ALL → -1; unknown throws

@@ -2,6 +2,19 @@ using Documenter
 using DocumenterVitepress
 using AtmosphericAbsorption
 using AtmosphericAbsorption.LineShapes: voigt, lorentz, doppler, pcqsdhc, HumlicekWeideman32
+using LazyArtifacts
+import Pkg.Artifacts: ensure_artifact_installed
+
+# Precomputed figure data + the golden CO2 .par the temperature plot uses live in the
+# `reference_data` lazy artifact (out of the package tree). Resolve via the repo-root
+# Artifacts.toml explicitly — `@artifact_str` would walk up from docs/make.jl, hit
+# docs/Project.toml, and stop before reaching it. Downloads on demand; CI has network.
+const REFDATA = try
+    ensure_artifact_installed("reference_data", joinpath(@__DIR__, "..", "Artifacts.toml"))
+catch err
+    @warn "reference_data artifact unavailable — data-backed figures skipped" exception = err
+    nothing
+end
 
 # ---------------------------------------------------------------------------
 # Plots.jl with the plotly() backend → standalone interactive HTML per figure, embedded
@@ -37,7 +50,7 @@ end
 
 # CO2 1.6 µm band at three temperatures — line strengths and widths shift with T.
 function plot_temperature()
-    par = joinpath(@__DIR__, "..", "test", "golden", "co2_6300_6400_p500_T250.par")
+    par = joinpath(REFDATA, "golden", "co2_6300_6400_p500_T250.par")
     db    = load_lines(HitranPort(par); mol = :CO2, iso = :main, min_strength = 1e-26)
     model = LineByLineModel(db; profile = Voigt(), wing_cutoff = 40.0)   # partition rides on db
     grid  = collect(6300.0:0.02:6400.0)
@@ -53,7 +66,7 @@ end
 # benchmark/gen_*.jl scripts so the doc build needs no network/HITRAN key (CI-safe).
 function read_xsec(name)
     nu, a, b = Float64[], Float64[], Float64[]
-    for ln in eachline(joinpath(@__DIR__, "src", "assets", name))
+    for ln in eachline(joinpath(REFDATA, "figures", name))
         startswith(strip(ln), "#") && continue
         c = split(ln)
         isempty(c) && continue
@@ -133,13 +146,17 @@ function write_isotopologue_table()
 end
 
 @info "Generating documentation figures…"
-plot_lineshape_families()
-plot_temperature()
-plot_co2_linemix()
-plot_h2o_ht()
-plot_exomol_co()
-plot_benchmark()
-write_isotopologue_table()
+plot_lineshape_families()      # pure math — no data needed
+plot_benchmark()               # tabulated timings — no data needed
+write_isotopologue_table()     # from committed data/hitran_isotopologues.csv
+if REFDATA === nothing
+    @warn "Skipping data-backed figures (temperature, CO₂ line-mixing, H₂O HT, ExoMol) — reference_data artifact unavailable"
+else
+    plot_temperature()
+    plot_co2_linemix()
+    plot_h2o_ht()
+    plot_exomol_co()
+end
 
 const REPO = "github.com/RemoteSensingTools/AtmosphericAbsorption.jl"
 const IN_CI = get(ENV, "CI", "false") == "true"

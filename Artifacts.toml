@@ -1,0 +1,7 @@
+[reference_data]
+git-tree-sha1 = "b318cdb58e834f2d3bb1f59af758d240f2488b1d"
+lazy = true
+
+    [[reference_data.download]]
+    sha256 = "3af39ea9f0d180ae940a2ae638aa099441b6c9a54d1b743b1d42f73324a71729"
+    url = "https://github.com/RemoteSensingTools/AtmosphericAbsorption.jl/releases/download/reference-data-v1/reference_data.tar.gz"

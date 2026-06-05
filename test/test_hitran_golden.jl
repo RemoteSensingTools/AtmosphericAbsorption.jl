@@ -5,8 +5,8 @@ using Test
 # Validate HITRAN line-by-line cross-sections against HAPI golden spectra. Each golden
 # ships the filtered .par subset (so we build the same line list) and HAPI's σ(ν) on a
 # fixed grid; we compare in the line cores (the far wings underflow and are dominated by
-# tiny absolute differences). Goldens are made by benchmark/hapi_reference/generate_golden.py.
-const GOLDEN = joinpath(@__DIR__, "golden")
+# tiny absolute differences). Goldens are made by benchmark/hapi_reference/generate_golden.py
+# and ship in the `reference_data` lazy artifact; GOLDEN (its golden dir) comes from runtests.jl.
 
 # name, mol, iso, p[hPa], T[K], wing[cm⁻¹]
 const GOLDEN_CASES = [

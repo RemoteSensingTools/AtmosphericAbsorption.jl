@@ -26,7 +26,7 @@ end
     p21, p17 = TIPS2021PF(), TIPS2017PF()
     @test Q_ratio(p21, 1, 1, 296.0, 296.0) == 1               # ref/ref = 1
     # Latest edition is the HitranPort default.
-    port = HitranPort(joinpath(@__DIR__, "golden", "co_2100_2200.par"))
+    port = HitranPort(COPAR)
     @test partition_function(port, 5, 1) isa TIPS2021PF
     # Physical and close to the previous edition for the major isotopologues.
     for (m, i) in ((1, 1), (2, 1), (5, 1), (7, 1))

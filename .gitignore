@@ -5,3 +5,11 @@
 /docs/package-lock.json
 /docs/Manifest.toml
 /docs/src/isotopologues.md
+
+# Reference data (HAPI goldens + precomputed docs-figure data) lives in the `reference_data`
+# lazy Pkg artifact (see Artifacts.toml), not the tree. These are the staging locations the
+# benchmark/ generators write to — keep regenerated/materialized copies out of git.
+/test/golden/
+/docs/src/assets/co2_linemix_band.txt
+/docs/src/assets/exomol_co_xsec.txt
+/docs/src/assets/h2o_voigt_vs_ht.txt
