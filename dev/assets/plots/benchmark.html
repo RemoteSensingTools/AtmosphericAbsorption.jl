@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Benchmark</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>html, body, #plot { width: 100%; height: 100%; margin: 0; background: #ffffff; }</style>
+</head>
+<body>
+  <div id="plot"></div>
+  <script>
+    Plotly.newPlot("plot", [{"type":"scatter","mode":"lines+markers","name":"hapi2 (numba)","x":["2.5","5","10","25","full"],"y":[114.0,173.0,286.0,623.0,4691.0],"line":{"width":2.5,"color":"#dc2626"},"marker":{"size":8}},{"type":"scatter","mode":"lines+markers","name":"AtmosphericAbsorption CPU","x":["2.5","5","10","25","full"],"y":[177.0,235.0,349.0,683.0,4122.0],"line":{"width":2.5,"color":"#2563eb"},"marker":{"size":8}},{"type":"scatter","mode":"lines+markers","name":"AtmosphericAbsorption GPU","x":["2.5","5","10","25","full"],"y":[2.1,2.2,2.4,3.0,10.1],"line":{"width":2.5,"color":"#16a34a"},"marker":{"size":8}}], {"title":{"text":"Time vs wing cutoff — 4000 lines × 400 cm⁻¹ band (A100)","x":0.02},"margin":{"l":74,"r":20,"t":70,"b":86},"xaxis":{"title":"wing cutoff  [cm⁻¹]","type":"category"},"yaxis":{"title":"time  [ms]","type":"log"},"legend":{"orientation":"h","x":0.0,"y":-0.22,"xanchor":"left","yanchor":"top"},"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","font":{"family":"Inter, system-ui, sans-serif"}}, {"responsive":true,"displaylogo":false,"modeBarButtonsToRemove":["lasso2d","select2d"]});
+  </script>
+</body>
+</html>
