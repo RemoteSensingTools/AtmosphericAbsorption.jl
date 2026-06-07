@@ -20,7 +20,7 @@ The package call being timed is the standard pipeline:
 ```julia
 using AtmosphericAbsorption
 
-port = HitranPort(; molecule="CO2", numin=6000, numax=6400, edition="HITRAN2020")
+port = HitranPort(; edition="HITRAN2020")
 lines = load_lines(port; mol=2, iso=1, ν_min=6000, ν_max=6400)
 pf    = partition_function(port, 2, 1)
 

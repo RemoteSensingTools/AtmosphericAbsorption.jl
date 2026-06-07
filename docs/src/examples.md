@@ -4,14 +4,14 @@ A cookbook of short, end-to-end recipes. Each example is self-contained and runs
 
 ## 1. HITRAN CO₂ at 1.6 µm
 
-Download the CO₂ lines for the 1.6 µm band directly from hitran.org (public, no API key), build a Voigt line-by-line model, and compute the cross-section on a fine grid. The `HitranPort` keyword form fetches the `.par` file and `load_lines` reads it into a `LineDatabase` with the latest-edition (TIPS-2021) partition function already attached, so `LineByLineModel(lines)` needs nothing more.
+Download the CO₂ lines for the 1.6 µm band directly from hitran.org (public, no API key), build a Voigt line-by-line model, and compute the cross-section on a fine grid. `HitranPort(; edition)` is a reusable handle to the database; `load_lines` downloads the requested band (cached) and reads it into a `LineDatabase` with the latest-edition (TIPS-2021) partition function already attached, so `LineByLineModel(lines)` needs nothing more. (For a one-shot, `load_hitran(:CO2; numin=6300, numax=6400)` does both in one call.)
 
 ```julia
 using AtmosphericAbsorption
 
 # 6300–6400 cm⁻¹ is the 1.6 µm CO₂ band
-port  = HitranPort(; molecule=:CO2, numin=6300, numax=6400, edition="HITRAN2020")
-lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)
+port  = HitranPort(; edition="HITRAN2020")                    # a reusable HITRAN handle
+lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)    # fetch (cached) + read this band
 
 model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)   # partition rides on lines
 
@@ -35,12 +35,11 @@ grid = collect(2000.0:0.01:2250.0)            # cm⁻¹
 σ    = compute_cross_section(model, grid, 1013.25, 296.0)
 ```
 
-Because ExoMol and HITRAN encode line intensities completely differently, computing the same band from both is a strong validation of the intensity path. Load the matching HITRAN lines, build an identical model, and overlay the two cross-sections — every downstream call is the same; only the `Port` changes.
+Because ExoMol and HITRAN encode line intensities completely differently, computing the same band from both is a strong validation of the intensity path. Load the matching HITRAN lines, build an identical model, and overlay the two cross-sections — every downstream call is the same; only the loader changes.
 
 ```julia
 # Same band, same physics, from HITRAN instead of ExoMol
-hport = HitranPort(; molecule=:CO, numin=2000, numax=2250, edition="HITRAN2020")
-hlines = load_lines(hport; mol=:CO, ν_min=2000, ν_max=2250)
+hlines = load_hitran(:CO; numin=2000, numax=2250, edition="HITRAN2020")
 hmodel = LineByLineModel(hlines; profile=Voigt(), wing_cutoff=40.0)
 
 σ_exomol = compute_cross_section(model,  grid, 1013.25, 296.0)
@@ -82,7 +81,7 @@ The pipeline runs on NVIDIA CUDA (`GPU()`), Apple Metal (`MetalGPU()`, Float32 o
 using AtmosphericAbsorption
 using CUDA                                     # loads the GPU backend
 
-port  = HitranPort(; molecule=:CO2, numin=6300, numax=6400, edition="HITRAN2020")
+port  = HitranPort(; edition="HITRAN2020")
 lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400, FT=Float32)
 
 model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0,
@@ -157,7 +156,7 @@ Self-broadening (the absorber broadening itself) matters when the gas is abundan
 ```julia
 using AtmosphericAbsorption
 
-lines = load_lines(HitranPort(; molecule=:H2O, numin=3800, numax=3820); mol=:H2O)
+lines = load_hitran(:H2O; numin=3800, numax=3820)
 model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
 grid  = collect(3800.0:0.01:3820.0)
 
@@ -174,7 +173,7 @@ When you need the cross-section at many (pressure, temperature) points — sweep
 ```julia
 using AtmosphericAbsorption
 
-lines = load_lines(HitranPort(; molecule=:CO2, numin=6300, numax=6400); mol=:CO2)
+lines = load_hitran(:CO2; numin=6300, numax=6400)
 lbl   = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)
 
 grid  = collect(6300.0:0.01:6400.0)

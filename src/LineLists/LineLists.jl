@@ -18,7 +18,7 @@ using ..PartitionFunctions: AbstractPartitionFunction, TIPS2017PF, TIPS2021PF, T
 
 export AbstractLineListPort, LineDatabase, SourceMetadata,
        load_lines, partition_function, source_metadata,
-       HitranPort, ExoMolPort, fetch_hitran, activate_hitran!,
+       HitranPort, ExoMolPort, fetch_hitran, load_hitran, activate_hitran!,
        fetch_hitran_nonvoigt, load_hitran_nonvoigt,
        molecules, molecule_number, molecule_symbol, isotopologue,
        register_molecule!, register_isotopologue!, resolve_molecule, resolve_isotopologue

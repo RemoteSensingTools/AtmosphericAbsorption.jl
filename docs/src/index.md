@@ -43,7 +43,7 @@ optical properties a radiative-transfer model needs.
 using AtmosphericAbsorption
 
 # download CO2 lines for the 1.6 µm band straight from hitran.org
-db    = load_lines(HitranPort(; molecule = "CO2", numin = 6300, numax = 6400); mol = 2, iso = 1)
+db    = load_hitran(:CO2; numin = 6300, numax = 6400)
 model = LineByLineModel(db, TIPS2021PF(); profile = Voigt(), wing_cutoff = 40.0)
 
 grid  = collect(6300.0:0.01:6400.0)          # cm⁻¹

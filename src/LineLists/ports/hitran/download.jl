@@ -97,11 +97,17 @@ function fetch_hitran(molecule::Union{Integer,Symbol,AbstractString}; numin::Rea
 end
 
 """
-    HitranPort(; molecule, numin=0, numax=150000, edition="HITRAN2020", force=false)
+    load_hitran(molecule; numin=0, numax=150000, edition="HITRAN2020",
+                iso=:ALL, min_strength=0.0, force=false, FT=Float64) -> LineDatabase{FT}
 
-Convenience constructor that downloads HITRAN data for `molecule` (via `fetch_hitran`)
-and returns a `HitranPort` pointing at the cached `.par`.
+One-call HITRAN fetch + parse: download `molecule` over `[numin, numax]` from the named edition
+(cached) and return a `LineDatabase`. Sugar for
+`load_lines(HitranPort(; edition); mol=molecule, ν_min=numin, ν_max=numax, …)` — use the explicit
+two-step when you want to reuse one `HitranPort(; edition)` handle across several molecules/bands.
 """
-HitranPort(; molecule::Union{Integer,Symbol,AbstractString}, numin::Real = 0,
-           numax::Real = 150000, edition::AbstractString = "HITRAN2020", force::Bool = false) =
-    HitranPort(fetch_hitran(molecule; numin, numax, edition, force); edition)
+load_hitran(molecule::Union{Integer,Symbol,AbstractString}; numin::Real = 0,
+            numax::Real = 150000, edition::AbstractString = "HITRAN2020", iso = -1,
+            min_strength::Real = 0.0, force::Bool = false,
+            FT::Type{<:AbstractFloat} = Float64) =
+    load_lines(HitranPort(; edition); mol = molecule, iso, ν_min = numin, ν_max = numax,
+               min_strength, force, FT)

@@ -33,9 +33,9 @@ end
     if !haskey(ENV, "AA_NETWORK_TESTS")
         @info "HITRAN download test skipped — set AA_NETWORK_TESTS=1 to enable"
     else
+        port = HitranPort(; edition = "HITRAN2020")          # reusable remote handle, no I/O here
         db = try
-            load_lines(HitranPort(; molecule = "CO", numin = 2100.0, numax = 2200.0);
-                       mol = 5, iso = 1, min_strength = 1e-25)
+            load_lines(port; mol = 5, iso = 1, ν_min = 2100.0, ν_max = 2200.0, min_strength = 1e-25)
         catch e
             @info "HITRAN download failed (offline?) — skipping" exception = (e, catch_backtrace())
             nothing
@@ -44,8 +44,14 @@ end
             @test length(db) > 40
             @test all(2100 .≤ db.ν0 .≤ 2200)
             @test issorted(db.ν0)
+            # one-call sugar hits the same cached file and agrees
+            @test length(load_hitran(:CO; numin = 2100, numax = 2200, iso = 1, min_strength = 1e-25)) == length(db)
         end
     end
+end
+
+@testset "remote HitranPort needs a molecule (offline)" begin
+    @test_throws ArgumentError load_lines(HitranPort(; edition = "HITRAN2020"); ν_min = 2100, ν_max = 2200)
 end
 
 # Authenticated non-Voigt (HT/SDV) fetch — gated on BOTH an API key and network.

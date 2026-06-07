@@ -58,11 +58,12 @@ Let's download CO₂ from hitran.org over 6300–6400 cm⁻¹ and compute its cr
 ```julia
 using AtmosphericAbsorption
 
-# 1. A Port that fetches CO2 lines from hitran.org for our spectral window
-port = HitranPort(; molecule=:CO2, numin=6300, numax=6400, edition="HITRAN2020")
+# 1. A handle to the HITRAN database (just the edition — no download yet)
+port = HitranPort(; edition="HITRAN2020")
 
-# 2. Read the lines (the partition function rides along on the LineDatabase)
-lines = load_lines(port)                         # -> LineDatabase, partition attached
+# 2. Read CO2 lines for our window — load_lines fetches (cached) and reads them
+#    (the partition function rides along on the LineDatabase)
+lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)
 
 # 3. Build the line-by-line model (Voigt profile by default)
 model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)

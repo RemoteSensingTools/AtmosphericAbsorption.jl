@@ -63,14 +63,16 @@ lines = load_lines(port; mol=:CO2, iso=:main, ν_min=6300, ν_max=6400, min_stre
 
 ## 2. HITRAN direct download
 
-To fetch lines straight from hitran.org, construct a `HitranPort` with keyword arguments instead of a file path. The line list is downloaded once into the scratch cache (with a `.meta.toml` alongside) and reused thereafter; pass `force=true` to re-download. This endpoint is public and needs no API key.
+To fetch lines straight from hitran.org, make a remote `HitranPort(; edition)` handle and ask `load_lines` for a molecule + band — it downloads that window once into the scratch cache (with a `.meta.toml` alongside) and reuses it thereafter (`force=true` re-downloads). The handle carries no molecule or band, so define it once and reuse it across as many species as you like. This endpoint is public and needs no API key.
 
 ```julia
 using AtmosphericAbsorption
 
-port  = HitranPort(; molecule="CO2", numin=6300, numax=6400, edition="HITRAN2020")
-lines = load_lines(port)
-pf    = partition_function(port, 2, 1)
+port = HitranPort(; edition="HITRAN2020")            # a reusable handle — no download yet
+co2  = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)   # fetch (cached) + read
+h2o  = load_lines(port; mol=:H2O, ν_min=7000, ν_max=7100)   # same handle, another species
+
+lines = load_hitran(:CO2; numin=6300, numax=6400, edition="HITRAN2020")   # one-shot shortcut
 ```
 
 If you only want the raw `.par` on disk, `fetch_hitran` downloads it and returns the file path:
@@ -106,8 +108,7 @@ db = load_hitran_nonvoigt("H2O"; numin=3700, numax=3850, min_strength=0.0, FT=Fl
 To actually use those parameters, choose a non-Voigt profile when building the model — `SpeedDependentVoigt()` for speed-dependent broadening, or `HartmannTran()` for the full Hartmann–Tran profile:
 
 ```julia
-pf    = partition_function(HitranPort(; molecule="H2O", numin=3700, numax=3850), 1, 1)
-model = LineByLineModel(db, pf; profile=HartmannTran(), wing_cutoff=40.0)
+model = LineByLineModel(db; profile=HartmannTran(), wing_cutoff=40.0)   # partition rides on db
 
 grid  = collect(3700.0:0.01:3850.0)      # cm⁻¹
 σ     = compute_cross_section(model, grid, 1013.25, 296.0)   # p[hPa], T[K]

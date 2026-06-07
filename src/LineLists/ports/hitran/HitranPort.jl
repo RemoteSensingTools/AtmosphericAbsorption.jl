@@ -5,10 +5,24 @@ TIPS-2017 as the partition function.
 =#
 
 """
-    HitranPort(path; edition="HITRAN2016")
+    HitranPort(path; edition="HITRAN2016")    # a local `.par` file
+    HitranPort(; edition="HITRAN2020")        # the HITRAN database, fetched on demand
 
-A HITRAN `.par` file as a line-list source. Advanced (HT/SDV/line-mixing) columns
-are left at zero — HITRAN `.par` is Voigt-parameterized.
+A HITRAN line-list source. Two flavours, both consumed the same way by `load_lines`:
+
+  * `HitranPort("co2.par")` wraps a **local `.par` file** — `load_lines` parses and filters it.
+  * `HitranPort(; edition)` is a **remote handle** carrying only the edition; the molecule and
+    band live on the `load_lines` call (which downloads them, cached). Define the handle once and
+    reuse it to pull as many molecules / bands as you like:
+
+    ```julia
+    port = HitranPort(; edition="HITRAN2020")
+    co2  = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)
+    h2o  = load_lines(port; mol=:H2O, ν_min=7000, ν_max=7100)
+    ```
+
+Advanced (HT/SDV/line-mixing) columns are left at zero — HITRAN `.par` is Voigt-parameterized;
+see [`load_hitran_nonvoigt`](@ref) for those. The empty path is the remote sentinel.
 """
 struct HitranPort <: AbstractLineListPort
     path::String
@@ -17,22 +31,35 @@ end
 
 HitranPort(path::AbstractString; edition::AbstractString = "HITRAN2016") =
     HitranPort(String(path), String(edition))
+HitranPort(; edition::AbstractString = "HITRAN2020") = HitranPort("", String(edition))
 
 """
     load_lines(port::HitranPort; mol=:ALL, iso=:ALL, ν_min=0.0, ν_max=Inf,
-               min_strength=0.0, FT=Float64) -> LineDatabase{FT}
+               min_strength=0.0, force=false, FT=Float64) -> LineDatabase{FT}
 
-Parse and filter the port's `.par` file into a `LineDatabase{FT}` sorted ascending in
-wavenumber, with per-line molar mass and the TIPS-2021 partition function attached.
-`mol`/`iso` accept the generic notation — a symbol (`:CO2`, `:main`), a string, an integer
-id, or `:ALL` for every molecule/isotopologue (the multi-molecule "see what's in this band"
-case).
+Produce a `LineDatabase{FT}` sorted ascending in wavenumber, with per-line molar mass and the
+TIPS-2021 partition function attached. For a **local-file** port the `.par` is parsed and filtered;
+for a **remote** port (`HitranPort(; edition)`) the `mol`/band drive a download (cached) of that
+molecule over `[ν_min, ν_max]`, which is then parsed.
+
+`mol`/`iso` accept the generic notation — a symbol (`:CO2`, `:main`), a string, an integer id, or
+`:ALL` for every molecule/isotopologue (the multi-molecule "see what's in this band" case; only
+valid for a local file — a remote download needs a concrete molecule). `force=true` re-downloads
+even if cached.
 """
 function load_lines(port::HitranPort; mol = -1, iso = -1,
                     ν_min::Real = 0.0, ν_max::Real = Inf, min_strength::Real = 0.0,
-                    FT::Type{<:AbstractFloat} = Float64)
+                    force::Bool = false, FT::Type{<:AbstractFloat} = Float64)
     m = resolve_molecule(mol); i = resolve_isotopologue(m, iso)
-    c = parse_par(port.path; mol = m, iso = i, ν_min, ν_max, min_strength)
+    path = if isempty(port.path)
+        m == -1 && throw(ArgumentError(
+            "a remote HitranPort needs a molecule — e.g. load_lines(port; mol=:CO2, ν_min=…, ν_max=…)"))
+        fetch_hitran(m; numin = ν_min, numax = isfinite(ν_max) ? ν_max : 150000.0,
+                     edition = port.edition, force)
+    else
+        port.path
+    end
+    c = parse_par(path; mol = m, iso = i, ν_min, ν_max, min_strength)
     p = sortperm(c.ν)
     mm = FT[molar_mass(c.mol[k], c.iso[k]) for k in p]
     return LineDatabase(; mol = c.mol[p], iso = c.iso[p], ν0 = FT.(c.ν[p]), S = FT.(c.S[p]),

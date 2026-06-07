@@ -13,6 +13,7 @@ load_lines
 source_metadata
 HitranPort
 fetch_hitran
+load_hitran
 ExoMolPort
 activate_hitran!
 fetch_hitran_nonvoigt
