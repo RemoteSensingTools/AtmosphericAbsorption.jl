@@ -5,12 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Benchmark</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <style>html, body, #plot { width: 100%; height: 100%; margin: 0; background: #ffffff; }</style>
+  <style>html, body, #plot { width: 100%; height: 100%; margin: 0; background: transparent; }</style>
 </head>
 <body>
   <div id="plot"></div>
   <script>
-    Plotly.newPlot("plot", [{"type":"scatter","mode":"lines+markers","name":"hapi2 (numba)","x":["2.5","5","10","25","full"],"y":[114.0,173.0,286.0,623.0,4691.0],"line":{"width":2.5,"color":"#dc2626"},"marker":{"size":8}},{"type":"scatter","mode":"lines+markers","name":"AtmosphericAbsorption CPU","x":["2.5","5","10","25","full"],"y":[177.0,235.0,349.0,683.0,4122.0],"line":{"width":2.5,"color":"#2563eb"},"marker":{"size":8}},{"type":"scatter","mode":"lines+markers","name":"AtmosphericAbsorption GPU","x":["2.5","5","10","25","full"],"y":[2.1,2.2,2.4,3.0,10.1],"line":{"width":2.5,"color":"#16a34a"},"marker":{"size":8}}], {"title":{"text":"Time vs wing cutoff — 4000 lines × 400 cm⁻¹ band (A100)","x":0.02},"margin":{"l":74,"r":20,"t":70,"b":86},"xaxis":{"title":"wing cutoff  [cm⁻¹]","type":"category"},"yaxis":{"title":"time  [ms]","type":"log"},"legend":{"orientation":"h","x":0.0,"y":-0.22,"xanchor":"left","yanchor":"top"},"paper_bgcolor":"#ffffff","plot_bgcolor":"#ffffff","font":{"family":"Inter, system-ui, sans-serif"}}, {"responsive":true,"displaylogo":false,"modeBarButtonsToRemove":["lasso2d","select2d"]});
+    // Transparent background lets the embedding docs page show through, so the figure blends
+    // into both light and dark mode; we adapt text / gridlines / axes for readability. The
+    // figure is same-origin with the page, so it reads VitePress's `html.dark` and follows the
+    // day/night toggle live (falling back to prefers-color-scheme if ever cross-origin).
+    const data = [{"type":"scatter","mode":"lines+markers","name":"hapi2 (numba)","x":["2.5","5","10","25","full"],"y":[114.0,173.0,286.0,623.0,4691.0],"line":{"width":2.5,"color":"#dc2626"},"marker":{"size":8}},{"type":"scatter","mode":"lines+markers","name":"AtmosphericAbsorption CPU","x":["2.5","5","10","25","full"],"y":[177.0,235.0,349.0,683.0,4122.0],"line":{"width":2.5,"color":"#2563eb"},"marker":{"size":8}},{"type":"scatter","mode":"lines+markers","name":"AtmosphericAbsorption GPU","x":["2.5","5","10","25","full"],"y":[2.1,2.2,2.4,3.0,10.1],"line":{"width":2.5,"color":"#16a34a"},"marker":{"size":8}}], config = {"responsive":true,"displaylogo":false,"modeBarButtonsToRemove":["lasso2d","select2d"]}, base = {"title":{"text":"Time vs wing cutoff — 4000 lines × 400 cm⁻¹ band (A100)","x":0.02},"margin":{"l":74,"r":20,"t":70,"b":86},"xaxis":{"title":"wing cutoff  [cm⁻¹]","type":"category"},"yaxis":{"title":"time  [ms]","type":"log"},"legend":{"orientation":"h","x":0.0,"y":-0.22,"xanchor":"left","yanchor":"top"},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","font":{"family":"Inter, system-ui, sans-serif"}};
+    const THEME = {
+      light: { font: "#3c3c43", grid: "rgba(60,60,67,0.14)", zero: "rgba(60,60,67,0.30)", axis: "rgba(60,60,67,0.30)" },
+      dark:  { font: "#dfdfd6", grid: "rgba(235,235,245,0.12)", zero: "rgba(235,235,245,0.26)", axis: "rgba(235,235,245,0.22)" }
+    };
+    function isDark() {
+      try { return !!window.parent.document.documentElement.classList.contains("dark"); }
+      catch (e) { return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
+    }
+    function attrs(t) {
+      return {
+        paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+        "font.color": t.font, "legend.font.color": t.font,
+        "xaxis.gridcolor": t.grid, "yaxis.gridcolor": t.grid,
+        "xaxis.zerolinecolor": t.zero, "yaxis.zerolinecolor": t.zero,
+        "xaxis.linecolor": t.axis, "yaxis.linecolor": t.axis,
+        "xaxis.tickcolor": t.axis, "yaxis.tickcolor": t.axis
+      };
+    }
+    // Bake the initial theme into the layout so there is no first-paint flash, then relayout on toggle.
+    const t0 = isDark() ? THEME.dark : THEME.light;
+    const layout = Object.assign({}, base, {
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+      font: Object.assign({}, base.font || {}, { color: t0.font }),
+      xaxis: Object.assign({}, base.xaxis || {}, { gridcolor: t0.grid, zerolinecolor: t0.zero, linecolor: t0.axis, tickcolor: t0.axis }),
+      yaxis: Object.assign({}, base.yaxis || {}, { gridcolor: t0.grid, zerolinecolor: t0.zero, linecolor: t0.axis, tickcolor: t0.axis }),
+      legend: Object.assign({}, base.legend || {}, { font: { color: t0.font } })
+    });
+    Plotly.newPlot("plot", data, layout, config);
+    function sync() { Plotly.relayout("plot", attrs(isDark() ? THEME.dark : THEME.light)); }
+    try { new MutationObserver(sync).observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ["class"] }); }
+    catch (e) { if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync); }
   </script>
 </body>
 </html>
