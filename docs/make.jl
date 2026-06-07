@@ -63,45 +63,78 @@ function _plotly_doc(data, layout; title)
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>$title</title>
       <script src="$PLOTLY_CDN_URL"></script>
-      <style>html, body, #plot { width: 100%; height: 100%; margin: 0; background: transparent; }</style>
+      <style>html, body, #plot { width: 100%; height: 100%; margin: 0; }</style>
+      <script>try { document.documentElement.style.background = window.parent.document.documentElement.classList.contains("dark") ? "#1b1b1f" : "#ffffff"; } catch (e) {}</script>
     </head>
     <body>
       <div id="plot"></div>
       <script>
-        // Transparent background lets the embedding docs page show through, so the figure blends
-        // into both light and dark mode; we adapt text / gridlines / axes for readability. The
-        // figure is same-origin with the page, so it reads VitePress's `html.dark` and follows the
-        // day/night toggle live (falling back to prefers-color-scheme if ever cross-origin).
+        // The figure carries a SOLID background matching the embedding docs page, plus distinct light
+        // and dark trace palettes / text / gridline colours. It is same-origin with the page, so it
+        // reads VitePress's `html.dark` and the page's actual background colour, and re-themes live on
+        // the day/night toggle (prefers-color-scheme fallback if it ever runs cross-origin).
         const data = $(_json_value(data)), config = $(_json_value(config)), base = $(_json_value(layout));
-        const THEME = {
-          light: { font: "#3c3c43", grid: "rgba(60,60,67,0.14)", zero: "rgba(60,60,67,0.30)", axis: "rgba(60,60,67,0.30)" },
-          dark:  { font: "#dfdfd6", grid: "rgba(235,235,245,0.12)", zero: "rgba(235,235,245,0.26)", axis: "rgba(235,235,245,0.22)" }
-        };
+        const FG   = { light: "#3c3c43", dark: "#dfdfd6" };
+        const GRID = { light: "rgba(60,60,67,0.14)", dark: "rgba(235,235,245,0.13)" };
+        const ZERO = { light: "rgba(60,60,67,0.30)", dark: "rgba(235,235,245,0.28)" };
+        const AXIS = { light: "rgba(60,60,67,0.30)", dark: "rgba(235,235,245,0.24)" };
+        // light (600-weight) -> dark (brighter 400-weight) trace colours
+        const CMAP = { "#2563eb": "#60a5fa", "#dc2626": "#f87171", "#16a34a": "#4ade80",
+                       "#7c3aed": "#c084fc", "#ea580c": "#fb923c", "#0891b2": "#22d3ee" };
+        const baseColors = data.map(function (t) { return (t.line && t.line.color) || null; });
         function isDark() {
           try { return !!window.parent.document.documentElement.classList.contains("dark"); }
           catch (e) { return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
         }
-        function attrs(t) {
+        function pageBg(d) {
+          try {
+            var doc = window.parent.document;
+            var els = [doc.body, doc.documentElement];
+            for (var i = 0; i < els.length; i++) {
+              var b = getComputedStyle(els[i]).backgroundColor;
+              if (b && b !== "rgba(0, 0, 0, 0)" && b !== "transparent") return b;
+            }
+          } catch (e) {}
+          return d ? "#1b1b1f" : "#ffffff";
+        }
+        function traceColors(d) {
+          return baseColors.map(function (c) { return (c && d && CMAP[c]) ? CMAP[c] : c; });
+        }
+        function k(d) { return d ? "dark" : "light"; }
+        function layoutAttrs(d) {
+          var bg = pageBg(d), m = k(d);
           return {
-            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-            "font.color": t.font, "legend.font.color": t.font,
-            "xaxis.gridcolor": t.grid, "yaxis.gridcolor": t.grid,
-            "xaxis.zerolinecolor": t.zero, "yaxis.zerolinecolor": t.zero,
-            "xaxis.linecolor": t.axis, "yaxis.linecolor": t.axis,
-            "xaxis.tickcolor": t.axis, "yaxis.tickcolor": t.axis
+            paper_bgcolor: bg, plot_bgcolor: bg,
+            "font.color": FG[m], "legend.font.color": FG[m],
+            "xaxis.gridcolor": GRID[m], "yaxis.gridcolor": GRID[m],
+            "xaxis.zerolinecolor": ZERO[m], "yaxis.zerolinecolor": ZERO[m],
+            "xaxis.linecolor": AXIS[m], "yaxis.linecolor": AXIS[m],
+            "xaxis.tickcolor": AXIS[m], "yaxis.tickcolor": AXIS[m]
           };
         }
-        // Bake the initial theme into the layout so there is no first-paint flash, then relayout on toggle.
-        const t0 = isDark() ? THEME.dark : THEME.light;
+        // Bake the initial theme so there is no first-paint flash.
+        const d0 = isDark(), m0 = k(d0), bg0 = pageBg(d0);
+        document.documentElement.style.background = bg0;
+        document.body.style.background = bg0;
         const layout = Object.assign({}, base, {
-          paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-          font: Object.assign({}, base.font || {}, { color: t0.font }),
-          xaxis: Object.assign({}, base.xaxis || {}, { gridcolor: t0.grid, zerolinecolor: t0.zero, linecolor: t0.axis, tickcolor: t0.axis }),
-          yaxis: Object.assign({}, base.yaxis || {}, { gridcolor: t0.grid, zerolinecolor: t0.zero, linecolor: t0.axis, tickcolor: t0.axis }),
-          legend: Object.assign({}, base.legend || {}, { font: { color: t0.font } })
+          paper_bgcolor: bg0, plot_bgcolor: bg0,
+          font: Object.assign({}, base.font || {}, { color: FG[m0] }),
+          xaxis: Object.assign({}, base.xaxis || {}, { gridcolor: GRID[m0], zerolinecolor: ZERO[m0], linecolor: AXIS[m0], tickcolor: AXIS[m0] }),
+          yaxis: Object.assign({}, base.yaxis || {}, { gridcolor: GRID[m0], zerolinecolor: ZERO[m0], linecolor: AXIS[m0], tickcolor: AXIS[m0] }),
+          legend: Object.assign({}, base.legend || {}, { font: { color: FG[m0] } })
         });
-        Plotly.newPlot("plot", data, layout, config);
-        function sync() { Plotly.relayout("plot", attrs(isDark() ? THEME.dark : THEME.light)); }
+        const c0 = traceColors(d0);
+        const data0 = data.map(function (t, i) {
+          return (c0[i] && t.line) ? Object.assign({}, t, { line: Object.assign({}, t.line, { color: c0[i] }) }) : t;
+        });
+        Plotly.newPlot("plot", data0, layout, config);
+        function sync() {
+          var d = isDark(), bg = pageBg(d);
+          document.documentElement.style.background = bg;
+          document.body.style.background = bg;
+          Plotly.relayout("plot", layoutAttrs(d));
+          Plotly.restyle("plot", { "line.color": traceColors(d), "marker.color": traceColors(d) });
+        }
         try { new MutationObserver(sync).observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ["class"] }); }
         catch (e) { if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync); }
       </script>
@@ -135,7 +168,7 @@ function _layout(title, xtitle, ytitle; ylog = false, xcategory = false)
             xaxis = (; title = xtitle, type = xcategory ? "category" : "-"),
             yaxis = (; title = ytitle, type = ylog ? "log" : "linear"),
             legend = _bottom_legend(),
-            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", font = _standard_font())
+            paper_bgcolor = "#ffffff", plot_bgcolor = "#ffffff", font = _standard_font())
 end
 
 # ---------------------------------------------------------------------------
