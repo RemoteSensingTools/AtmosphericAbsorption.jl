@@ -49,7 +49,9 @@ Only the `architecture` and `wing_cutoff` keywords change between rows.
 | 25 | 623 ms | 683 ms | 3.0 ms | 209× |
 | full | 4691 ms | 4122 ms | 10.1 ms | 464× |
 
+```@raw html
 <iframe title="Benchmark" src="assets/plots/benchmark.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
+```
 
 ## How to read this
 

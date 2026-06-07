@@ -2,7 +2,9 @@
 
 The shape of a spectral line — how absorption is distributed in wavenumber around a transition's center ν₀ — is set by the physics of the gas: how fast the molecules move (thermal Doppler broadening) and how often they collide (pressure broadening). AtmosphericAbsorption.jl lets you select the broadening physics with a single `profile=` keyword on `LineByLineModel`, while keeping the same line list, partition function, and grid. This page explains the profile family and how to choose among them.
 
+```@raw html
 <iframe title="Line-shape families" src="assets/plots/lineshape_families.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
+```
 
 ## The profile family
 
@@ -50,7 +52,9 @@ The Hartmann-Tran profile (the partially-correlated quadratic speed-dependent ha
 
 The plot below overlays Voigt and Hartmann-Tran for a slice of the H₂O ν₃ band (real HITRAN HT parameters): the speed dependence subtly narrows and reshapes the line cores — a small but real difference that matters for high-accuracy retrievals.
 
+```@raw html
 <iframe title="H2O Voigt vs Hartmann-Tran" src="assets/plots/h2o_voigt_vs_ht.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
+```
 
 ## Getting the advanced parameters
 
@@ -71,7 +75,9 @@ Voigt, Lorentz, speed-dependent Voigt, and Hartmann-Tran are **collisional** pro
 
 The effect is dramatic across the CO₂ 4.3 µm band: mixing redistributes intensity between the densely-overlapping lines and makes the band wings fall off far faster than a plain Voigt sum (the well-known sub-Lorentzian behavior). For CO₂, HITRAN supplies the speed-dependent-Voigt line-mixing coefficient (no `γ₂`), so the Hartmann-Tran curve below coincides with "Voigt + line mixing".
 
+```@raw html
 <iframe title="CO2 line mixing" src="assets/plots/co2_linemix.html" loading="lazy" style="width:100%;height:520px;border:1px solid var(--vp-c-divider);border-radius:8px;"></iframe>
+```
 
 ## Swapping profiles on the same line list
 
