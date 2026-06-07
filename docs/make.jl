@@ -63,12 +63,47 @@ function _plotly_doc(data, layout; title)
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>$title</title>
       <script src="$PLOTLY_CDN_URL"></script>
-      <style>html, body, #plot { width: 100%; height: 100%; margin: 0; background: #ffffff; }</style>
+      <style>html, body, #plot { width: 100%; height: 100%; margin: 0; background: transparent; }</style>
     </head>
     <body>
       <div id="plot"></div>
       <script>
-        Plotly.newPlot("plot", $(_json_value(data)), $(_json_value(layout)), $(_json_value(config)));
+        // Transparent background lets the embedding docs page show through, so the figure blends
+        // into both light and dark mode; we adapt text / gridlines / axes for readability. The
+        // figure is same-origin with the page, so it reads VitePress's `html.dark` and follows the
+        // day/night toggle live (falling back to prefers-color-scheme if ever cross-origin).
+        const data = $(_json_value(data)), config = $(_json_value(config)), base = $(_json_value(layout));
+        const THEME = {
+          light: { font: "#3c3c43", grid: "rgba(60,60,67,0.14)", zero: "rgba(60,60,67,0.30)", axis: "rgba(60,60,67,0.30)" },
+          dark:  { font: "#dfdfd6", grid: "rgba(235,235,245,0.12)", zero: "rgba(235,235,245,0.26)", axis: "rgba(235,235,245,0.22)" }
+        };
+        function isDark() {
+          try { return !!window.parent.document.documentElement.classList.contains("dark"); }
+          catch (e) { return !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
+        }
+        function attrs(t) {
+          return {
+            paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+            "font.color": t.font, "legend.font.color": t.font,
+            "xaxis.gridcolor": t.grid, "yaxis.gridcolor": t.grid,
+            "xaxis.zerolinecolor": t.zero, "yaxis.zerolinecolor": t.zero,
+            "xaxis.linecolor": t.axis, "yaxis.linecolor": t.axis,
+            "xaxis.tickcolor": t.axis, "yaxis.tickcolor": t.axis
+          };
+        }
+        // Bake the initial theme into the layout so there is no first-paint flash, then relayout on toggle.
+        const t0 = isDark() ? THEME.dark : THEME.light;
+        const layout = Object.assign({}, base, {
+          paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+          font: Object.assign({}, base.font || {}, { color: t0.font }),
+          xaxis: Object.assign({}, base.xaxis || {}, { gridcolor: t0.grid, zerolinecolor: t0.zero, linecolor: t0.axis, tickcolor: t0.axis }),
+          yaxis: Object.assign({}, base.yaxis || {}, { gridcolor: t0.grid, zerolinecolor: t0.zero, linecolor: t0.axis, tickcolor: t0.axis }),
+          legend: Object.assign({}, base.legend || {}, { font: { color: t0.font } })
+        });
+        Plotly.newPlot("plot", data, layout, config);
+        function sync() { Plotly.relayout("plot", attrs(isDark() ? THEME.dark : THEME.light)); }
+        try { new MutationObserver(sync).observe(window.parent.document.documentElement, { attributes: true, attributeFilter: ["class"] }); }
+        catch (e) { if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sync); }
       </script>
     </body>
     </html>
@@ -100,7 +135,7 @@ function _layout(title, xtitle, ytitle; ylog = false, xcategory = false)
             xaxis = (; title = xtitle, type = xcategory ? "category" : "-"),
             yaxis = (; title = ytitle, type = ylog ? "log" : "linear"),
             legend = _bottom_legend(),
-            paper_bgcolor = "#ffffff", plot_bgcolor = "#ffffff", font = _standard_font())
+            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", font = _standard_font())
 end
 
 # ---------------------------------------------------------------------------
