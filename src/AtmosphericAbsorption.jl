@@ -42,7 +42,8 @@ export AbstractLineListPort, LineDatabase, SourceMetadata,
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
        TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc,
        InterpolationModel, build_interpolation_model,
-       save_interpolation_model, load_interpolation_model
+       save_interpolation_model, load_interpolation_model,
+       AbscoLUT, read_absco, save_absco_lut, load_absco_lut
 # Continuum (CIA + MT_CKD water vapor)
 export CIATable, parse_cia_file, load_cia, cia_cross_section, cia_cross_section!,
        MTCKDTable, MTCKDBand, load_mtckd, build_mtckd_band, h2o_continuum, h2o_continuum!

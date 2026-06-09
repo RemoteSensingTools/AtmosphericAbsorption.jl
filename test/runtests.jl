@@ -20,6 +20,7 @@ const COPAR = GOLDEN === nothing ? "" : joinpath(GOLDEN, "co_2100_2200.par")
     include("test_advanced_profiles.jl")
     include("test_xsc.jl")
     include("test_interpolation.jl")
+    include("test_absco.jl")
     include("test_continuum.jl")
     if GOLDEN !== nothing
         include("test_pcqsdhc.jl")
