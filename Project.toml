@@ -1,7 +1,7 @@
 name = "AtmosphericAbsorption"
 uuid = "e0e35e18-ffce-4906-90bd-929a5e163038"
 authors = ["Christian Frankenberg <cfranken@caltech.edu> and contributors"]
-version = "0.1.0-DEV"
+version = "0.1.0"
 
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
