@@ -165,6 +165,21 @@ grid = collect(940.0:0.1:960.0)                    # cm⁻¹
 
 A `.xsc` file holds one or more (T, p) panels; `compute_cross_section` interpolates σ onto your grid — linearly in wavenumber, and linearly in temperature at the nearest tabulated pressure, clamping to the measured range. Wavenumbers outside every panel return zero. `read_xsc(path)` returns the raw `XscBand`s if you want the panels directly.
 
+## 6. AER ABSCO tabulated cross-sections
+
+AER's **ABSCO** tables — the precomputed cross-sections behind OCO-2/3, MicroCarb and similar retrievals — tabulate σ on a dense grid of (wavenumber, pressure, temperature, **H₂O broadener VMR**). Their grid is awkward to interpolate directly: the temperature nodes *slide with pressure* (each pressure level carries its own set of temperatures). Rather than resample onto a regular cube (which wastes storage on the corners ABSCO never covers and blurs the values), `read_absco` keeps the native grid in an [`AbscoLUT`](@ref) and interpolates at query time — so **querying at an original node returns the stored spectrum exactly**. The `.hdf` files are HDF5, read through NCDatasets (`using NCDatasets` enables `read_absco`; the core package stays NetCDF-free).
+
+```julia
+using AtmosphericAbsorption, NCDatasets
+
+lut  = read_absco("co2_v52.hdf")                    # -> AbscoLUT (Float32)
+
+grid = collect(6300.0:0.01:6400.0)                  # cm⁻¹
+σ    = compute_cross_section(lut, grid, 500.0, 250.0; vmr = 0.03)   # H₂O broadener VMR = 3 %
+```
+
+The H₂O broadener is a genuine third interpolation axis (`vmr`, default dry = 0); `interp = :cubic` swaps the default linear temperature interpolation for a smooth Catmull-Rom (both exact at the nodes). Like every model here, `AbscoLUT` runs on CPU **or** GPU — pass `architecture = GPU()` to `read_absco` to keep the cube on the device. Convert once and ship the table without the raw file via `save_absco_lut` / `load_absco_lut`.
+
 ## Provenance and reproducibility
 
 Every cached artifact carries a `.meta.toml` sidecar recording its source, molecule/isotopologue, spectral window, and edition or line-list version. This lets you confirm — months later, or on another machine — exactly which spectroscopic data underlies a cross-section, and is the recommended way to track data versions in reproducible workflows. Query it at runtime with `source_metadata(port, mol, iso)`.

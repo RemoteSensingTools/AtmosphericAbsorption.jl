@@ -49,6 +49,17 @@ build_interpolation_model
 save_interpolation_model
 ```
 
+## ABSCO lookup tables
+
+AER ABSCO tabulated cross-sections on their native grid (per-pressure temperature axis + an H₂O
+broadener third axis); `read_absco` needs NCDatasets (`using NCDatasets`). Runs on CPU or GPU.
+
+```@docs
+AbscoLUT
+read_absco
+save_absco_lut
+```
+
 ## Tabulated cross-sections (HITRAN `.xsc`)
 
 ```@docs
