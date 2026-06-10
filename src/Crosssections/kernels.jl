@@ -24,10 +24,18 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
 end
 
 """
-    compute_cross_section(model, grid, pressure, temperature; vmr=model.vmr) -> Vector
+    compute_cross_section(model, grid, pressure, temperature;
+                          vmr=model.vmr, wavelength_flag=false) -> Vector
 
-Absorption cross-section [cm²/molecule] on `grid` [cm⁻¹] at `pressure` [hPa] and
+Absorption cross-section [cm²/molecule] on `grid` at `pressure` [hPa] and
 `temperature` [K]. Result lives on the model's architecture (host `Array` for CPU).
+
+`grid` is wavenumber [cm⁻¹] by default. Set `wavelength_flag=true` to pass `grid` in
+**wavelength [nm]** instead: the grid is converted to wavenumber via
+`ν[cm⁻¹] = NM_PER_M / λ[nm]` before any line work, so the wing cutoff is always applied
+in wavenumber space. The returned `σ` aligns **element-for-element with the input `grid`**
+in its original order — a nm-ascending grid (which is wavenumber-descending) comes back in
+nm-ascending order, even though the internal computation runs on the sorted wavenumber grid.
 
 `vmr` is the volume mixing ratio of the absorbing gas, used to blend self- and
 foreign(air)-broadening: width and shift are `(1-vmr)·foreign + vmr·self`. It defaults to
@@ -35,7 +43,32 @@ the model's `vmr`, but can be overridden per call — e.g. to sweep the H₂O cr
 over humidity without rebuilding the model. `vmr=0` is pure foreign (air) broadening.
 """
 function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
-                               pressure::Real, temperature::Real; vmr::Real = model.vmr) where {FT}
+                               pressure::Real, temperature::Real;
+                               vmr::Real = model.vmr, wavelength_flag::Bool = false) where {FT}
+    arch = model.architecture
+    Ng   = length(grid)
+    Ng == 0 && return array_type(arch)(zeros(FT, Ng))
+
+    if wavelength_flag
+        # Convert nm → cm⁻¹ FIRST (host-side), then run the wavenumber path so the wing
+        # cutoff is windowed in cm⁻¹. nm-ascending is cm⁻¹-descending, but `prepare` needs
+        # an ascending grid for its binary searches, so we sort, compute, and scatter σ
+        # back to the caller's original (nm) order. All ordering work is host-side; only
+        # the sorted cm⁻¹ grid is uploaded to the device.
+        ν    = FT(NM_PER_M) ./ collect(FT, grid)        # wavenumber [cm⁻¹]
+        perm = sortperm(ν)                              # ascending-cm⁻¹ ordering
+        σν   = _compute_cross_section(model, ν[perm], pressure, temperature; vmr)
+        σh   = Vector{FT}(undef, Ng)                    # inverse-permute on the host
+        σh[perm] = Array(σν)                            #   (Array() copies a GPU result back)
+        return array_type(arch)(σh)                     # result back on the model's device
+    end
+
+    return _compute_cross_section(model, grid, pressure, temperature; vmr)
+end
+
+# Wavenumber-grid core. `grid` must be ascending [cm⁻¹] (the LineDatabase / prepare contract).
+function _compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
+                                pressure::Real, temperature::Real; vmr::Real) where {FT}
     arch = model.architecture
     Ng   = length(grid)
     σ    = array_type(arch)(zeros(FT, Ng))

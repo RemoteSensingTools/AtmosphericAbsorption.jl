@@ -133,4 +133,59 @@ end
         @test molecules(db) == [:CO2]
         @test db[db.mol .== 2].partition === db.partition
     end
+
+    @testset "wavelength grid: equivalence to reverse-mapped wavenumber ($FT)" for FT in (Float32, Float64)
+        nm_per_m = FT(AtmosphericAbsorption.Constants.NM_PER_M)
+        # Put a CO2 line in the band: ~12980 cm⁻¹ ≈ 770.4 nm.
+        ν0 = nm_per_m / FT(770.4)
+        model = LineByLineModel(oneline_db(FT; ν0 = ν0), flatpf(FT); profile = Voigt(), wing_cutoff = FT(40))
+        λ  = collect(FT, 770:FT(0.002):771)                       # nm, ascending
+        ν  = nm_per_m ./ λ                                        # cm⁻¹, descending (nm-ascending)
+        σλ = compute_cross_section(model, λ, 1013.25, 296.0; wavelength_flag = true)
+        # Equivalent wavenumber path: the wavenumber API needs an ascending grid, so sort the
+        # cm⁻¹ values, compute, then reverse-map σ back to the nm (input) order via the same
+        # permutation. This must reproduce the wavelength-flag result bit-for-bit.
+        perm = sortperm(ν)                                       # ascending-cm⁻¹ ordering
+        σsorted = compute_cross_section(model, ν[perm], 1013.25, 296.0)
+        σν = similar(σsorted); σν[perm] = σsorted                # reverse-map to nm order
+        @test σλ == σν                                           # bit-identical (pure reordering)
+        @test eltype(σλ) === FT
+    end
+
+    @testset "wavelength grid: wing cutoff is windowed in cm⁻¹, not nm ($FT)" for FT in (Float32, Float64)
+        nm_per_m = FT(AtmosphericAbsorption.Constants.NM_PER_M)
+        λ  = collect(FT, 770:FT(0.001):771)                       # nm → [12970.2, 12987.0] cm⁻¹
+        νmin = nm_per_m / FT(771)                                 # low end of the cm⁻¹ window
+        # A line 10 cm⁻¹ below the window with a 5 cm⁻¹ cutoff → exactly zero contribution.
+        # Its nm-equivalent (≈771.9 nm) sits inside a naive nm-margin window [765, 776], so a
+        # buggy "cm⁻¹ cutoff applied to nm values" implementation would wrongly include it.
+        ν_far = νmin - FT(5) - FT(10)
+        far = LineByLineModel(oneline_db(FT; ν0 = ν_far, γ_air = FT(0.1)), flatpf(FT);
+                              profile = Lorentz(), wing_cutoff = FT(5))
+        σ = compute_cross_section(far, λ, 1013.25, 296.0; wavelength_flag = true)
+        @test all(iszero, σ)                                     # out-of-window ⇒ contributes nothing
+
+        # Sanity: a line *inside* the window does contribute, so the zero above is meaningful.
+        ν_in = nm_per_m / FT(770.5)
+        near = LineByLineModel(oneline_db(FT; ν0 = ν_in, γ_air = FT(0.1)), flatpf(FT);
+                               profile = Lorentz(), wing_cutoff = FT(5))
+        @test any(!iszero, compute_cross_section(near, λ, 1013.25, 296.0; wavelength_flag = true))
+    end
+
+    @testset "wavelength grid: returned σ aligns with input nm order ($FT)" for FT in (Float32, Float64)
+        nm_per_m = FT(AtmosphericAbsorption.Constants.NM_PER_M)
+        ν0 = nm_per_m / FT(770.5)
+        model = LineByLineModel(oneline_db(FT; ν0 = ν0), flatpf(FT); profile = Voigt(), wing_cutoff = FT(40))
+        λ  = collect(FT, 770:FT(0.002):771)                       # nm, ascending
+        σ  = compute_cross_section(model, λ, 1013.25, 296.0; wavelength_flag = true)
+        @test length(σ) == length(λ)
+        # σ aligns element-for-element with the nm grid: the peak sits at the grid point
+        # nearest the line's wavelength (770.5 nm), regardless of internal cm⁻¹ reordering.
+        @test λ[argmax(σ)] ≈ FT(770.5) atol = FT(0.01)
+        # And the same call on a deliberately shuffled nm grid scatters σ back to match it.
+        perm = [3, 1, length(λ), 2]                              # an arbitrary reordering of a few points
+        λp = λ[perm]
+        σp = compute_cross_section(model, λp, 1013.25, 296.0; wavelength_flag = true)
+        @test σp == σ[perm]
+    end
 end

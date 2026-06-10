@@ -51,6 +51,12 @@ data source (Port)  ──load_lines──▶  LineDatabase
 | Cross-section `σ` | cm²/molecule |
 | `wing_cutoff` | cm⁻¹ |
 
+The cross-section grid is wavenumber [cm⁻¹] by default. If your grid is in **wavelength
+[nm]** instead, pass `wavelength_flag=true` to `compute_cross_section`; the grid is
+converted to wavenumber internally (`ν = NM_PER_M / λ`, so the wing cutoff is always
+applied in cm⁻¹) and the returned `σ` is aligned element-for-element with your nm grid in
+its original order — a nm-ascending grid (wavenumber-descending) comes back nm-ascending.
+
 ## A first end-to-end example
 
 Let's download CO₂ from hitran.org over 6300–6400 cm⁻¹ and compute its cross-section at a mid-troposphere state of **p = 500 hPa, T = 250 K**. The HITRAN download is public — no account or API key is needed.
