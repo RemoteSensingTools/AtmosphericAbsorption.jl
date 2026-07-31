@@ -20,6 +20,22 @@ const GOLDEN_CASES = [
     @test (f('1'), f('9'), f('0'), f('A'), f('B')) == (1, 9, 10, 11, 12)
 end
 
+@testset "blank optional statistical weight" begin
+    source_line = first(eachline(COPAR))
+    blank_weight_line = source_line[1:146] * "       " * source_line[154:end]
+    path, stream = mktemp()
+    try
+        println(stream, blank_weight_line)
+        close(stream)
+        database = load_lines(HitranPort(path))
+        @test length(database) == 1
+        @test database.g_upper == [0.0]
+    finally
+        isopen(stream) && close(stream)
+        rm(path; force=true)
+    end
+end
+
 @testset "HITRAN API key management" begin
     activate_hitran!("test-dummy-key")          # never a real key in tests
     @test AtmosphericAbsorption.LineLists.has_hitran_api_key()

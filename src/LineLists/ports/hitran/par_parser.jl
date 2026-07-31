@@ -9,6 +9,10 @@ const _PAR = (mol = 1:2, iso = 3:3, ν = 4:15, S = 16:25, γ_air = 36:40,
               γ_self = 41:45, E = 46:55, n_air = 56:59, δ = 60:67, g_up = 147:153)
 
 @inline _f64(line, r) = parse(Float64, @view line[r])
+@inline function _f64_or_zero(line, r)
+    field = @view line[r]
+    return all(isspace, field) ? 0.0 : parse(Float64, field)
+end
 
 # HITRAN local_iso_id: digits 1–9, '0' → 10, then 'A' → 11, 'B' → 12, …
 @inline function _isoid(c::Char)
@@ -53,7 +57,9 @@ function parse_par(path::AbstractString; mol::Integer = -1, iso::Integer = -1,
         push!(cols.γ_self, _f64(line, _PAR.γ_self))
         push!(cols.n_air, _f64(line, _PAR.n_air))
         push!(cols.δ, _f64(line, _PAR.δ))
-        push!(cols.g_up, _f64(line, _PAR.g_up))
+        # Some HITRAN-derived lists (including GGG2020's terrestrial Voigt
+        # list) leave the optional upper-state statistical weight blank.
+        push!(cols.g_up, _f64_or_zero(line, _PAR.g_up))
     end
     return cols
 end
