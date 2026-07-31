@@ -40,7 +40,7 @@ function _hitran_cache_covers(meta_path, numin, numax)
 end
 
 """
-    fetch_hitran(molecule; numin=0, numax=150000, edition="HITRAN2020", force=false) -> path
+    fetch_hitran(molecule; numin=0, numax=150000, edition="HITRAN2024", force=false) -> path
 
 Download HITRAN `.par` line data for `molecule` (all isotopologues) over `[numin, numax]`
 cm⁻¹ from hitran.org, caching it in a Scratch dir with provenance. Returns the local
@@ -48,7 +48,7 @@ cm⁻¹ from hitran.org, caching it in a Scratch dir with provenance. Returns th
 Wrap the result in a `HitranPort` to load it.
 """
 function fetch_hitran(molecule::Union{Integer,Symbol,AbstractString}; numin::Real = 0,
-                      numax::Real = 150000, edition::AbstractString = "HITRAN2020",
+                      numax::Real = 150000, edition::AbstractString = "HITRAN2024",
                       force::Bool = false)
     id = resolve_molecule(molecule)
     id < 1 && error("fetch_hitran needs a specific molecule (e.g. :CO2), not :ALL")
@@ -97,7 +97,7 @@ function fetch_hitran(molecule::Union{Integer,Symbol,AbstractString}; numin::Rea
 end
 
 """
-    load_hitran(molecule; numin=0, numax=150000, edition="HITRAN2020",
+    load_hitran(molecule; numin=0, numax=150000, edition="HITRAN2024",
                 iso=:ALL, min_strength=0.0, force=false, FT=Float64) -> LineDatabase{FT}
 
 One-call HITRAN fetch + parse: download `molecule` over `[numin, numax]` from the named edition
@@ -106,7 +106,7 @@ One-call HITRAN fetch + parse: download `molecule` over `[numin, numax]` from th
 two-step when you want to reuse one `HitranPort(; edition)` handle across several molecules/bands.
 """
 load_hitran(molecule::Union{Integer,Symbol,AbstractString}; numin::Real = 0,
-            numax::Real = 150000, edition::AbstractString = "HITRAN2020", iso = -1,
+            numax::Real = 150000, edition::AbstractString = "HITRAN2024", iso = -1,
             min_strength::Real = 0.0, force::Bool = false,
             FT::Type{<:AbstractFloat} = Float64) =
     load_lines(HitranPort(; edition); mol = molecule, iso, ν_min = numin, ν_max = numax,

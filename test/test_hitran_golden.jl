@@ -18,6 +18,7 @@ const GOLDEN_CASES = [
 @testset "HITRAN local_iso_id decoding" begin
     f = AtmosphericAbsorption.LineLists._isoid
     @test (f('1'), f('9'), f('0'), f('A'), f('B')) == (1, 9, 10, 11, 12)
+    @test HitranPort().edition == "HITRAN2024"
 end
 
 @testset "blank optional statistical weight" begin
@@ -49,7 +50,7 @@ end
     if !haskey(ENV, "AA_NETWORK_TESTS")
         @info "HITRAN download test skipped — set AA_NETWORK_TESTS=1 to enable"
     else
-        port = HitranPort(; edition = "HITRAN2020")          # reusable remote handle, no I/O here
+        port = HitranPort(; edition = "HITRAN2024")          # reusable remote handle, no I/O here
         db = try
             load_lines(port; mol = 5, iso = 1, ν_min = 2100.0, ν_max = 2200.0, min_strength = 1e-25)
         catch e
@@ -67,7 +68,7 @@ end
 end
 
 @testset "remote HitranPort needs a molecule (offline)" begin
-    @test_throws ArgumentError load_lines(HitranPort(; edition = "HITRAN2020"); ν_min = 2100, ν_max = 2200)
+    @test_throws ArgumentError load_lines(HitranPort(; edition = "HITRAN2024"); ν_min = 2100, ν_max = 2200)
 end
 
 # Authenticated non-Voigt (HT/SDV) fetch — gated on BOTH an API key and network.

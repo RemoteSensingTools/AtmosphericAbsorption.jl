@@ -10,7 +10,7 @@ Download the CO₂ lines for the 1.6 µm band directly from hitran.org (public, 
 using AtmosphericAbsorption
 
 # 6300–6400 cm⁻¹ is the 1.6 µm CO₂ band
-port  = HitranPort(; edition="HITRAN2020")                    # a reusable HITRAN handle
+port  = HitranPort(; edition="HITRAN2024")                    # a reusable HITRAN handle
 lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)    # fetch (cached) + read this band
 
 model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0)   # partition rides on lines
@@ -39,7 +39,7 @@ Because ExoMol and HITRAN encode line intensities completely differently, comput
 
 ```julia
 # Same band, same physics, from HITRAN instead of ExoMol
-hlines = load_hitran(:CO; numin=2000, numax=2250, edition="HITRAN2020")
+hlines = load_hitran(:CO; numin=2000, numax=2250, edition="HITRAN2024")
 hmodel = LineByLineModel(hlines; profile=Voigt(), wing_cutoff=40.0)
 
 σ_exomol = compute_cross_section(model,  grid, 1013.25, 296.0)
@@ -81,7 +81,7 @@ The pipeline runs on NVIDIA CUDA (`GPU()`), Apple Metal (`MetalGPU()`, Float32 o
 using AtmosphericAbsorption
 using CUDA                                     # loads the GPU backend
 
-port  = HitranPort(; edition="HITRAN2020")
+port  = HitranPort(; edition="HITRAN2024")
 lines = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400, FT=Float32)
 
 model = LineByLineModel(lines; profile=Voigt(), wing_cutoff=40.0,

@@ -6,7 +6,7 @@ TIPS-2017 as the partition function.
 
 """
     HitranPort(path; edition="HITRAN2016")    # a local `.par` file
-    HitranPort(; edition="HITRAN2020")        # the HITRAN database, fetched on demand
+    HitranPort(; edition="HITRAN2024")        # the HITRAN database, fetched on demand
 
 A HITRAN line-list source. Two flavours, both consumed the same way by `load_lines`:
 
@@ -16,7 +16,7 @@ A HITRAN line-list source. Two flavours, both consumed the same way by `load_lin
     reuse it to pull as many molecules / bands as you like:
 
     ```julia
-    port = HitranPort(; edition="HITRAN2020")
+    port = HitranPort(; edition="HITRAN2024")
     co2  = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)
     h2o  = load_lines(port; mol=:H2O, ν_min=7000, ν_max=7100)
     ```
@@ -31,7 +31,7 @@ end
 
 HitranPort(path::AbstractString; edition::AbstractString = "HITRAN2016") =
     HitranPort(String(path), String(edition))
-HitranPort(; edition::AbstractString = "HITRAN2020") = HitranPort("", String(edition))
+HitranPort(; edition::AbstractString = "HITRAN2024") = HitranPort("", String(edition))
 
 """
     load_lines(port::HitranPort; mol=:ALL, iso=:ALL, ν_min=0.0, ν_max=Inf,

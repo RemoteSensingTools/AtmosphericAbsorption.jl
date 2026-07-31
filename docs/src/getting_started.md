@@ -65,7 +65,7 @@ Let's download CO₂ from hitran.org over 6300–6400 cm⁻¹ and compute its cr
 using AtmosphericAbsorption
 
 # 1. A handle to the HITRAN database (just the edition — no download yet)
-port = HitranPort(; edition="HITRAN2020")
+port = HitranPort(; edition="HITRAN2024")
 
 # 2. Read CO2 lines for our window — load_lines fetches (cached) and reads them
 #    (the partition function rides along on the LineDatabase)

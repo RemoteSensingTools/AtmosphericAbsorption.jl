@@ -68,17 +68,17 @@ To fetch lines straight from hitran.org, make a remote `HitranPort(; edition)` h
 ```julia
 using AtmosphericAbsorption
 
-port = HitranPort(; edition="HITRAN2020")            # a reusable handle — no download yet
+port = HitranPort(; edition="HITRAN2024")            # a reusable handle — no download yet
 co2  = load_lines(port; mol=:CO2, ν_min=6300, ν_max=6400)   # fetch (cached) + read
 h2o  = load_lines(port; mol=:H2O, ν_min=7000, ν_max=7100)   # same handle, another species
 
-lines = load_hitran(:CO2; numin=6300, numax=6400, edition="HITRAN2020")   # one-shot shortcut
+lines = load_hitran(:CO2; numin=6300, numax=6400, edition="HITRAN2024")   # one-shot shortcut
 ```
 
 If you only want the raw `.par` on disk, `fetch_hitran` downloads it and returns the file path:
 
 ```julia
-path = fetch_hitran("CO2"; numin=6300, numax=6400, edition="HITRAN2020")
+path = fetch_hitran("CO2"; numin=6300, numax=6400, edition="HITRAN2024")
 ```
 
 The default HITRAN download provides the standard Voigt line parameters (air/self half-widths, pressure shifts, and temperature exponents). It does **not** carry first-order line-mixing coefficients — those, along with the speed-dependent and Hartmann–Tran parameters, come from the authenticated endpoint below, so a basic `.par` load applies no line mixing.
