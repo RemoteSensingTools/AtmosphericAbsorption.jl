@@ -49,7 +49,6 @@ ConservativeCrossSectionSampling
 ConservativeTransmissionSampling
 spectral_cell_edges
 conservative_resample
-conservative_transmission
 ```
 
 ## Interpolation tables (precomputed LUTs)

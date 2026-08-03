@@ -288,30 +288,6 @@ function conservative_resample(
     return was_vector ? vec(output) : output
 end
 
-"""
-    conservative_transmission(source_grid, optical_depth, target_grid;
-                              cell_edges=nothing)
-
-Conservatively average the resolved transmission `exp(-optical_depth)` in each
-target cell. This is the appropriate operation after optical depths from all
-atmospheric layers and species have been combined. It differs from averaging
-cross-sections when narrow or saturated structure is unresolved.
-"""
-function conservative_transmission(
-    source_grid::AbstractVector,
-    optical_depth::AbstractArray,
-    target_grid::AbstractVector;
-    cell_edges=nothing,
-)
-    transmission = exp.(-optical_depth)
-    return conservative_resample(
-        source_grid,
-        transmission,
-        target_grid;
-        cell_edges,
-    )
-end
-
 function _conservative_cross_section(
     fine_grid,
     fine_cross_section,

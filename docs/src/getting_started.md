@@ -156,8 +156,8 @@ depths, then average their total transmission:
 
 ```julia
 τ_total = sum(layer_optical_depths)
-T_bar = conservative_transmission(
-    fine_grid, τ_total, grid; cell_edges=optional_edges,
+T_bar = conservative_resample(
+    fine_grid, exp.(-τ_total), grid; cell_edges=optional_edges,
 )
 ```
 

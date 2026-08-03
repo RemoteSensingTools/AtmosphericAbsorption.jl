@@ -93,9 +93,9 @@ using Test
             target_grid;
             cell_edges=edges,
         ))
-        mean_transmission = only(conservative_transmission(
+        mean_transmission = only(conservative_resample(
             source_grid,
-            column .* narrow_cross_section,
+            exp.(-column .* narrow_cross_section),
             target_grid;
             cell_edges=edges,
         ))
@@ -113,9 +113,9 @@ using Test
             target_grid;
             cell_edges=edges,
         ))
-        smooth_transmission = only(conservative_transmission(
+        smooth_transmission = only(conservative_resample(
             source_grid,
-            column .* smooth_cross_section,
+            exp.(-column .* smooth_cross_section),
             target_grid;
             cell_edges=edges,
         ))
@@ -171,9 +171,9 @@ using Test
             FT(296),
             transmission_sampling,
         )
-        reference_transmission = conservative_transmission(
+        reference_transmission = conservative_resample(
             fine_grid,
-            column .* fine_cross_section,
+            exp.(-column .* fine_cross_section),
             target_grid;
             cell_edges=edges,
         )
