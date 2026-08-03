@@ -115,6 +115,56 @@ The `load_lines` keywords let you trim the line list as you read it: `ν_min`/`�
 
 To turn a cross-section into an optical depth, multiply by the absorber number density and the path length yourself; the package deliberately returns the pure cross-section so you stay in control of the atmospheric bookkeeping.
 
+## Sampling unresolved lines conservatively
+
+The default `PointSampling()` evaluates the model only at the requested grid
+centers and preserves the original API:
+
+```julia
+σ = compute_cross_section(model, grid, 500.0, 250.0)
+# exactly equivalent to:
+σ = compute_cross_section(model, grid, 500.0, 250.0, PointSampling())
+```
+
+That is efficient when the grid resolves the spectrum. For a coarse grid that
+may miss narrow lines, choose one of two conservative strategies:
+
+```julia
+# Preserve the cell integral of σ. Cell edges are inferred from grid centers.
+σ_bar = compute_cross_section(
+    model, grid, 500.0, 250.0,
+    ConservativeCrossSectionSampling(refinement=32),
+)
+
+# Preserve mean transmission at this particular column [molecules/cm²].
+N = 2.0e22
+σ_eff = compute_cross_section(
+    model, grid, 500.0, 250.0,
+    ConservativeTransmissionSampling(N; refinement=32),
+)
+T_bar = exp.(-N .* σ_eff)
+```
+
+Cross-section and transmission conservation are nearly identical for smooth or
+optically thin absorption. They differ for unresolved narrow or saturated lines:
+averaging `exp(-N*σ)` accounts for light transmitted between sub-cell line peaks,
+whereas applying Beer--Lambert to mean `σ` does not. The transmission-preserving
+effective cross-section therefore depends on `N`.
+
+For a multilayer or multispecies atmosphere, first combine the resolved optical
+depths, then average their total transmission:
+
+```julia
+τ_total = sum(layer_optical_depths)
+T_bar = conservative_transmission(
+    fine_grid, τ_total, grid; cell_edges=optional_edges,
+)
+```
+
+Set `fine_step` to control the resolved-grid spacing directly, or use
+`refinement` (default 32 fine intervals per smallest target cell). Pass explicit
+`cell_edges` when the instrument pixel boundaries are known.
+
 ## Where to next
 
 - Swap `profile=Voigt()` for `Doppler()`, `Lorentz()`, `SpeedDependentVoigt()`, or `HartmannTran()` to explore different line-shape physics.

@@ -93,8 +93,15 @@ outside the table's ν range). `interp` selects the **temperature** interpolatio
 or `:cubic` (smooth Catmull-Rom); both are exact at nodes. Runs on the table's architecture and returns
 an array there; querying on the table's own `ν` skips the ν resample.
 """
-function compute_cross_section(lut::AbscoLUT{FT}, grid::AbstractVector, pressure::Real,
-                               temperature::Real; vmr::Real = 0, interp::Symbol = :linear) where {FT}
+function compute_cross_section(
+    lut::AbscoLUT{FT},
+    grid::AbstractVector,
+    pressure::Real,
+    temperature::Real,
+    ::PointSampling;
+    vmr::Real=0,
+    interp::Symbol=:linear,
+) where {FT}
     jp, jp1, fp = _bracket(lut.p, clamp(FT(pressure), first(lut.p), last(lut.p)))
     kv, kv1, fv = _bracket(lut.vmr, clamp(FT(vmr), first(lut.vmr), last(lut.vmr)))
     T = FT(temperature)
@@ -107,6 +114,10 @@ function compute_cross_section(lut::AbscoLUT{FT}, grid::AbstractVector, pressure
     end
     grid === lut.ν && return σν
     return _lut_resample(lut.architecture, lut.ν, σν, grid)
+end
+
+function _sampling_architecture_result(model::AbscoLUT, values)
+    return array_type(model.architecture)(values)
 end
 
 """

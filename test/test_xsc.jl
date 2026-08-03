@@ -42,4 +42,11 @@ end
 
     m32 = load_xsc(path; FT = Float32)
     @test eltype(compute_cross_section(m32, Float32.(g), 1013.25f0, 250.0f0)) === Float32
+    @test length(compute_cross_section(
+        model,
+        g,
+        p,
+        250.0,
+        ConservativeCrossSectionSampling(refinement=4),
+    )) == length(g)
 end

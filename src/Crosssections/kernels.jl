@@ -24,7 +24,8 @@ and `cpf` are singleton type parameters, so the compiler specializes this kernel
 end
 
 """
-    compute_cross_section(model, grid, pressure, temperature;
+    compute_cross_section(model, grid, pressure, temperature,
+                          sampling=PointSampling();
                           vmr=model.vmr, wavelength_flag=false) -> Vector
 
 Absorption cross-section [cm²/molecule] on `grid` at `pressure` [hPa] and
@@ -43,7 +44,8 @@ the model's `vmr`, but can be overridden per call — e.g. to sweep the H₂O cr
 over humidity without rebuilding the model. `vmr=0` is pure foreign (air) broadening.
 """
 function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
-                               pressure::Real, temperature::Real;
+                               pressure::Real, temperature::Real,
+                               ::PointSampling;
                                vmr::Real = model.vmr, wavelength_flag::Bool = false) where {FT}
     arch = model.architecture
     Ng   = length(grid)
@@ -64,6 +66,13 @@ function compute_cross_section(model::LineByLineModel{FT}, grid::AbstractVector,
     end
 
     return _compute_cross_section(model, grid, pressure, temperature; vmr)
+end
+
+function _sampling_architecture_result(
+    model::LineByLineModel,
+    values,
+)
+    return array_type(model.architecture)(values)
 end
 
 # Wavenumber-grid core. `grid` must be ascending [cm⁻¹] (the LineDatabase / prepare contract).

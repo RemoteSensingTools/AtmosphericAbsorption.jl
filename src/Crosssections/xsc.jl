@@ -132,8 +132,13 @@ end
 Cross-section [cm²/molecule] on `grid` [cm⁻¹] at pressure `p` [hPa], temperature `T` [K],
 interpolated from the tabulated `.xsc` panels.
 """
-function compute_cross_section(model::TabulatedCrossSection{FT}, grid::AbstractVector,
-                               pressure::Real, temperature::Real) where {FT}
+function compute_cross_section(
+    model::TabulatedCrossSection{FT},
+    grid::AbstractVector,
+    pressure::Real,
+    temperature::Real,
+    ::PointSampling,
+) where {FT}
     p, T = FT(pressure), FT(temperature)
     return FT[_interp_xsc(model.bands, FT(ν), p, T) for ν in grid]
 end

@@ -22,12 +22,16 @@ using ..PartitionFunctions: AbstractPartitionFunction, Q_ratio, pf_name
 using ..LineLists: LineDatabase, molecules
 
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
+       AbstractSpectralSampling, PointSampling,
+       ConservativeCrossSectionSampling, ConservativeTransmissionSampling,
+       spectral_cell_edges, conservative_resample, conservative_transmission,
        TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc,
        InterpolationModel, build_interpolation_model,
        save_interpolation_model, load_interpolation_model,
        AbscoLUT, read_absco, save_absco_lut, load_absco_lut
 
 include("models.jl")
+include("sampling.jl")
 include("prepare.jl")
 include("kernels.jl")
 include("xsc.jl")

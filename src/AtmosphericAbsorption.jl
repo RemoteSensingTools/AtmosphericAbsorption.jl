@@ -40,6 +40,9 @@ export AbstractLineListPort, LineDatabase, SourceMetadata,
        register_molecule!, register_isotopologue!, resolve_molecule, resolve_isotopologue
 # Cross-section compute core
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
+       AbstractSpectralSampling, PointSampling,
+       ConservativeCrossSectionSampling, ConservativeTransmissionSampling,
+       spectral_cell_edges, conservative_resample, conservative_transmission,
        TabulatedCrossSection, XscBand, read_xsc, load_xsc, fetch_hitran_xsc,
        InterpolationModel, build_interpolation_model,
        save_interpolation_model, load_interpolation_model,

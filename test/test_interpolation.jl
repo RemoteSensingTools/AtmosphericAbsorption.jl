@@ -31,6 +31,13 @@ using Test
     @test compute_cross_section(im, ν, 500.0, 400.0) ≈ compute_cross_section(im, ν, 500.0, 300.0)   # T above
     g2 = collect(996.0:0.5:1004.0)
     @test length(compute_cross_section(im, g2, 500.0, 260.0)) == length(g2)
+    @test length(compute_cross_section(
+        im,
+        g2,
+        500.0,
+        260.0,
+        ConservativeCrossSectionSampling(refinement=4),
+    )) == length(g2)
     # Wavenumbers outside the table's ν range read as zero (no absorption recorded there).
     @test compute_cross_section(im, [900.0, 1100.0], 500.0, 260.0) == zeros(2)
 

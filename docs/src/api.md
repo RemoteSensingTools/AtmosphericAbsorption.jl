@@ -41,6 +41,17 @@ LineByLineModel
 compute_cross_section
 ```
 
+### Spectral sampling
+
+```@docs
+PointSampling
+ConservativeCrossSectionSampling
+ConservativeTransmissionSampling
+spectral_cell_edges
+conservative_resample
+conservative_transmission
+```
+
 ## Interpolation tables (precomputed LUTs)
 
 ```@docs

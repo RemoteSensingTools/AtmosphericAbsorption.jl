@@ -115,8 +115,13 @@ the table's ν range). `vmr` is fixed at build time. Runs on the table's archite
 array there (host `Array` for `CPU()`, device array for a GPU). Querying on the table's own `ν` skips
 the ν resample.
 """
-function compute_cross_section(im::InterpolationModel{FT}, grid::AbstractVector,
-                               pressure::Real, temperature::Real) where {FT}
+function compute_cross_section(
+    im::InterpolationModel{FT},
+    grid::AbstractVector,
+    pressure::Real,
+    temperature::Real,
+    ::PointSampling,
+) where {FT}
     jp, jp1, fp = _bracket(im.p, clamp(FT(pressure), first(im.p), last(im.p)))
     kt, kt1, ft = _bracket(im.T, clamp(FT(temperature), first(im.T), last(im.T)))
     # σ(ν) on the table grid by an arch-generic bilinear blend over the four (p, T) corner panels.
@@ -124,6 +129,13 @@ function compute_cross_section(im::InterpolationModel{FT}, grid::AbstractVector,
                 (1 - fp) * ft       .* im.σ[:, jp, kt1] .+ fp * ft       .* im.σ[:, jp1, kt1]
     grid === im.ν && return σν                            # fast path: query is the table grid
     return _lut_resample(im.architecture, im.ν, σν, grid)
+end
+
+function _sampling_architecture_result(
+    model::InterpolationModel,
+    values,
+)
+    return array_type(model.architecture)(values)
 end
 
 """

@@ -43,6 +43,15 @@ using NCDatasets   # enables read_absco (the ABSCO .hdf reader extension)
     @test compute_cross_section(lut, [3000.0, 5000.0], 500.0, 200.0) == zeros(2)
     g2 = collect(4010.0:2.0:4040.0)
     @test length(compute_cross_section(lut, g2, 500.0, 200.0)) == length(g2)
+    @test length(compute_cross_section(
+        lut,
+        g2,
+        500.0,
+        200.0,
+        ConservativeCrossSectionSampling(refinement=4);
+        vmr=0.03,
+        interp=:cubic,
+    )) == length(g2)
 
     # 4. The H₂O broadener really is a third axis: dry ≠ wet, and the default is dry (vmr=0).
     @test compute_cross_section(lut, ν, 500.0, 200.0; vmr = 0.0) !=
