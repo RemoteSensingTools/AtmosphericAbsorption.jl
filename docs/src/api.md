@@ -67,7 +67,9 @@ broadener third axis); `read_absco` needs NCDatasets (`using NCDatasets`). Runs 
 ```@docs
 AbscoLUT
 read_absco
+read_oco2_absco
 save_absco_lut
+load_absco_lut
 ```
 
 ## Tabulated cross-sections (HITRAN `.xsc`)

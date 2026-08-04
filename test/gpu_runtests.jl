@@ -52,3 +52,34 @@ end
         end
     end
 end
+
+@testset "Float32 ABSCO LUT matches CPU" begin
+    if arch === nothing
+        @info "No functional CUDA/Metal backend found; nothing to test."
+    else
+        FT = Float32
+        ν = collect(FT, 6140:FT(0.01):6140.5)
+        p = FT[100, 500, 1000]
+        T = FT[180 + 10(it - 1) + 5(ip - 1) for it in 1:4, ip in 1:3]
+        vmr = FT[0, 0.03, 0.06]
+        σ = FT[(1 + FT(2)v) * (1 + FT(1e-3)t) * (1 + FT(1e-4)pp) *
+               exp(-((x - FT(6140.25)) / FT(0.08))^2)
+               for x in ν, v in vmr, t in T[:, 1], pp in p]
+        # Give each pressure its own temperature axis, matching ABSCO's sliding grid.
+        for ip in eachindex(p), it in axes(T, 1), kv in eachindex(vmr), iν in eachindex(ν)
+            σ[iν, kv, it, ip] = (1 + FT(2)vmr[kv]) * (1 + FT(1e-3)T[it, ip]) *
+                                  (1 + FT(1e-4)p[ip]) *
+                                  exp(-((ν[iν] - FT(6140.25)) / FT(0.08))^2)
+        end
+
+        cpu = AbscoLUT(2, -1, ν, p, T, vmr, σ; architecture=CPU())
+        gpu = AbscoLUT(2, -1, ν, p, T, vmr, σ; architecture=arch)
+        grid = collect(FT, FT(6140.005):FT(0.013):FT(6140.495))
+        σcpu = compute_cross_section(cpu, grid, FT(730), FT(207); vmr=FT(0.041), interp=:linear)
+        σgpu = Array(compute_cross_section(gpu, grid, FT(730), FT(207);
+                                           vmr=FT(0.041), interp=:linear))
+        @test eltype(gpu.σ) === FT
+        @test eltype(σgpu) === FT
+        @test isapprox(σgpu, σcpu; rtol=8eps(FT), atol=0)
+    end
+end

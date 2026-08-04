@@ -172,13 +172,23 @@ AER's **ABSCO** tables — the precomputed cross-sections behind OCO-2/3, MicroC
 ```julia
 using AtmosphericAbsorption, NCDatasets
 
-lut  = read_absco("co2_v52.hdf")                    # -> AbscoLUT (Float32)
+lut  = read_oco2_absco("co2_v52.hdf", :wco2)       # -> AbscoLUT (Float32)
 
-grid = collect(6300.0:0.01:6400.0)                  # cm⁻¹
+grid = collect(6170.0:0.01:6270.0)                  # cm⁻¹
 σ    = compute_cross_section(lut, grid, 500.0, 250.0; vmr = 0.03)   # H₂O broadener VMR = 3 %
 ```
 
-The H₂O broadener is a genuine third interpolation axis (`vmr`, default dry = 0); `interp = :cubic` swaps the default linear temperature interpolation for a smooth Catmull-Rom (both exact at the nodes). Like every model here, `AbscoLUT` runs on CPU **or** GPU — pass `architecture = GPU()` to `read_absco` to keep the cube on the device. Convert once and ship the table without the raw file via `save_absco_lut` / `load_absco_lut`.
+The H₂O broadener is a genuine third interpolation axis (`vmr`, default dry = 0). Production OCO
+lookups use `interp=:linear`, giving linear interpolation in wavenumber, pressure, each pressure
+level's own temperature axis, and broadener VMR. The CO₂ and H₂O source files contain disjoint
+windows: `read_absco` rejects a selection that crosses an internal gap, while
+`read_oco2_absco(path, :o2 | :wco2 | :sco2)` safely selects the complete continuous source slab.
+
+Like every model here, `AbscoLUT` runs on CPU **or** GPU — pass `architecture=GPU()` when reading,
+or restore a portable product with `load_absco_lut(file; architecture=GPU())`. The repeatable
+six-product builder and deployment validator are `benchmark/build_oco2_absco_luts.jl` and
+`benchmark/validate_oco2_absco_luts.jl`; validation covers raw-node equality, independent off-node
+linear interpolation, Float32 CPU/GPU parity, temperature leave-one-out transmission, and timings.
 
 ## Provenance and reproducibility
 

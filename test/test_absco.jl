@@ -65,11 +65,53 @@ using NCDatasets   # enables read_absco (the ABSCO .hdf reader extension)
     @test lut2.σ == lut.σ && lut2.T == lut.T && lut2.vmr == lut.vmr
     @test compute_cross_section(lut2, ν, 500.0, 205.0; vmr = 0.03) ==
           compute_cross_section(lut, ν, 500.0, 205.0; vmr = 0.03)
+    lut3 = load_absco_lut(path; architecture=AtmosphericAbsorption.Architectures.CPU())
+    @test lut3.σ == lut.σ && lut3.architecture isa AtmosphericAbsorption.Architectures.CPU
 
     # 6. Float32 table stays Float32 end-to-end.
     lut32 = AbscoLUT(2, -1, Float32.(ν), Float32.(p), Float32.(T), Float32.(vmr), Float32.(σ))
     @test eltype(lut32.σ) === Float32
     @test eltype(compute_cross_section(lut32, Float32.(ν), 500.0f0, 205.0f0; vmr = 0.03f0)) === Float32
+end
+
+@testset "read_absco — spectral slabs and broadener selection" begin
+    # Mimic the two disjoint windows in the CO₂/H₂O ABSCO files. A full read must fail instead of
+    # interpolating across the gap; named OCO-2 reads select one complete continuous HDF5 slab.
+    νf = [4760.0, 4760.01, 4760.02, 6140.0, 6140.01, 6140.02]
+    pf = [100.0, 900.0]
+    vf = [0.0, 0.03, 0.06]
+    Tf = Float64[200 + 10it + ip for it in 1:2, ip in 1:2]
+    σf = Float32[1000i + 100kv + 10it + ip
+                 for i in eachindex(νf), kv in eachindex(vf), it in 1:2, ip in 1:2]
+
+    fn = joinpath(mktempdir(), "disjoint_co2_fixture.hdf")
+    NCDataset(fn, "c") do ds
+        defDim(ds, "nu", length(νf)); defDim(ds, "b", length(vf))
+        defDim(ds, "t", 2); defDim(ds, "p", 2)
+        defVar(ds, "Wavenumber", νf, ("nu",))
+        defVar(ds, "Pressure", pf .* 100, ("p",))
+        defVar(ds, "Temperature", Tf, ("t", "p"))
+        defVar(ds, "Broadener_01_VMR", vf, ("b",))
+        defVar(ds, "Gas_02_Absorption", σf, ("nu", "b", "t", "p"))
+    end
+
+    @test_throws ArgumentError read_absco(fn)
+    weak = read_oco2_absco(fn, :wco2)
+    strong = read_oco2_absco(fn, :sco2; broadener_vmr=0.03)
+    @test weak.ν == Float32.(νf[4:6])
+    @test weak.vmr == Float32.(vf)
+    @test weak.σ == σf[4:6, :, :, :]
+    @test strong.ν == Float32.(νf[1:3])
+    @test strong.vmr == Float32[0.03]
+    @test strong.σ == σf[1:3, 2:2, :, :]
+
+    @test_throws ArgumentError read_absco(fn; wavenumber_range=(5000, 5100))
+    @test_throws ArgumentError read_absco(fn; wavenumber_range=(4700, 6200))
+    @test_throws ArgumentError read_absco(fn; broadener_vmr=0.02,
+                                          wavenumber_range=(4760, 4761))
+    @test_throws ArgumentError read_absco(fn; broadener_vmr=:dry,
+                                          wavenumber_range=(4760, 4761))
+    @test_throws ArgumentError read_oco2_absco(fn, :not_a_band)
 end
 
 # Round-trip through the NCDatasets reader: write a tiny ABSCO-shaped HDF5/NetCDF file with the real

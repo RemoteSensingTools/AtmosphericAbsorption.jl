@@ -121,17 +121,45 @@ function _sampling_architecture_result(model::AbscoLUT, values)
 end
 
 """
-    read_absco(path; scale=1.0, FT=Float32, architecture=default_architecture()) -> AbscoLUT
+    read_absco(path; scale=1.0, FT=Float32, architecture=default_architecture(),
+               wavenumber_range=nothing, broadener_vmr=:all) -> AbscoLUT
 
 Read an AER ABSCO `.hdf` file into an [`AbscoLUT`](@ref) on `architecture`. **Requires NCDatasets**
 (`using NCDatasets` to enable it — the `.hdf` files are HDF5, which NCDatasets reads natively); the
 method lives in a package extension so AtmosphericAbsorption's core stays NetCDF-free.
+
+`wavenumber_range=(νmin, νmax)` reads only that continuous HDF5 slab, which is strongly recommended
+for the disjoint CO₂ and H₂O files. A selection that crosses an internal spectral gap is rejected.
+`broadener_vmr=:all` retains the complete H₂O foreign-broadening axis; passing an exact tabulated VMR
+(for example `0`) extracts only that node. `FT=Float32` keeps the table and all interpolation arithmetic
+in single precision, including when `architecture=GPU()`.
 """
 function read_absco end
 
+const _OCO2_ABSCO_WINDOWS = (
+    o2 = (12_000.0, 14_000.0),
+    wco2 = (6_000.0, 7_000.0),
+    sco2 = (4_500.0, 5_500.0),
+)
+
+"""
+    read_oco2_absco(path, band; kwargs...) -> AbscoLUT
+
+Read the continuous ABSCO window corresponding to OCO-2 `band`, one of `:o2`, `:wco2`, or `:sco2`.
+The broad bounds select the complete window present in the source gas file, so the same helper works
+for O₂, CO₂, and H₂O files. Keyword arguments are forwarded to [`read_absco`](@ref); in particular,
+the default retains all H₂O foreign-broadener nodes and `architecture=GPU()` loads the result on CUDA.
+"""
+function read_oco2_absco(path::AbstractString, band::Symbol; kwargs...)
+    hasproperty(_OCO2_ABSCO_WINDOWS, band) || throw(ArgumentError(
+        "OCO-2 band must be :o2, :wco2, or :sco2; got $band",
+    ))
+    return read_absco(path; wavenumber_range=getproperty(_OCO2_ABSCO_WINDOWS, band), kwargs...)
+end
+
 """
     save_absco_lut(path, lut)
-    load_absco_lut(path) -> AbscoLUT
+    load_absco_lut(path; architecture=nothing) -> AbscoLUT
 
 Persist / restore an [`AbscoLUT`](@ref) via Julia `Serialization` (copied to the host on save, so the
 file is portable; format tied to the writing Julia version). Use this to ship the converted table
@@ -142,4 +170,9 @@ function save_absco_lut(path::AbstractString, lut::AbscoLUT)
                    Architectures.CPU())
     open(io -> Serialization.serialize(io, cpu), path, "w")
 end
-load_absco_lut(path::AbstractString) = open(Serialization.deserialize, path)
+function load_absco_lut(path::AbstractString; architecture=nothing)
+    lut = open(Serialization.deserialize, path)
+    architecture === nothing && return lut
+    return AbscoLUT(lut.mol, lut.iso, Array(lut.ν), lut.p, lut.T, lut.vmr, Array(lut.σ);
+                    architecture)
+end
