@@ -16,7 +16,7 @@ on CPU or GPU and returns an array there.
 
 AER ABSCO tabulated cross-sections on their native grid: `σ[iν, ivmr, iT, ip]` [cm²/molecule] with
 wavenumber nodes `ν` [cm⁻¹], ascending pressure nodes `p` [hPa], **per-pressure** temperature nodes
-`T[iT, ip]` [K] (the ABSCO temperature grid slides with pressure), and H₂O broadener VMR nodes `vmr`.
+`T[iT, ip]` in K (the ABSCO temperature grid slides with pressure), and H₂O broadener VMR nodes `vmr`.
 Query with `compute_cross_section(lut, grid, p, T; vmr, interp)`, interpolated in (p, T, vmr) and
 linear in ν — querying at an original node is exact. The σ/ν arrays live on `architecture`. Build from
 a file with [`read_absco`](@ref).
@@ -159,17 +159,22 @@ end
 
 """
     save_absco_lut(path, lut)
-    load_absco_lut(path; architecture=nothing) -> AbscoLUT
 
-Persist / restore an [`AbscoLUT`](@ref) via Julia `Serialization` (copied to the host on save, so the
-file is portable; format tied to the writing Julia version). Use this to ship the converted table
-without the raw ABSCO file.
+Persist an [`AbscoLUT`](@ref) via Julia `Serialization`. Device arrays are copied to the host so the
+file can be restored on either CPU or GPU. The format is tied to the writing Julia version.
 """
 function save_absco_lut(path::AbstractString, lut::AbscoLUT)
     cpu = AbscoLUT(lut.mol, lut.iso, Array(lut.ν), lut.p, lut.T, lut.vmr, Array(lut.σ),
                    Architectures.CPU())
     open(io -> Serialization.serialize(io, cpu), path, "w")
 end
+
+"""
+    load_absco_lut(path; architecture=nothing) -> AbscoLUT
+
+Restore an [`AbscoLUT`](@ref) written by [`save_absco_lut`](@ref). Pass an `architecture` to move
+the spectral grid and cross-section table to that CPU or GPU architecture while loading.
+"""
 function load_absco_lut(path::AbstractString; architecture=nothing)
     lut = open(Serialization.deserialize, path)
     architecture === nothing && return lut
