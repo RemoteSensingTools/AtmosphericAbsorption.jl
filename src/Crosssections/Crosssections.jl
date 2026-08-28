@@ -22,6 +22,7 @@ using ..PartitionFunctions: AbstractPartitionFunction, Q_ratio, pf_name
 using ..LineLists: LineDatabase, molecules
 
 export AbstractCrossSectionModel, LineByLineModel, compute_cross_section,
+       compute_cross_section_profile,
        AbstractSpectralSampling, PointSampling,
        ConservativeCrossSectionSampling, ConservativeTransmissionSampling,
        spectral_cell_edges, conservative_resample,
@@ -37,5 +38,6 @@ include("kernels.jl")
 include("xsc.jl")
 include("interpolation.jl")
 include("absco.jl")
+include("profile.jl")
 
 end # module
