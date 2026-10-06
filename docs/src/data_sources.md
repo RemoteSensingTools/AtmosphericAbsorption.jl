@@ -130,7 +130,7 @@ pf    = partition_function(port, 5, 1)    # TabulatedPF from the ExoMol .pf file
 
 Pair the port with its own `partition_function` — for ExoMol this returns a `TabulatedPF` built from the ExoMol `.pf` file, which is the partition function used to derive the intensities. Computed ExoMol intensities agree with HITRAN to better than 0.05% for CO.
 
-ExoMol `.trans` files can be enormous (often gigabytes). They are streamed and windowed during loading rather than read into memory all at once, so requesting a narrow `ν_min`/`ν_max` window keeps the footprint small. As with HITRAN, the download is cached in scratch with a `.meta.toml` recording the species, line-list name (`"Li2015"` above), and spectral window for full provenance.
+ExoMol `.trans` files can be enormous (often gigabytes). They are streamed and windowed during loading rather than read into memory all at once, so requesting a narrow `ν_min`/`ν_max` window keeps the footprint small. As with HITRAN, the download is cached in scratch with a `.meta.toml` recording the species, line-list name (`"Li2015"` above), and spectral window for full provenance. Please [cite](citing.md#ExoMol) the ExoMol database and the paper for the line list you use; for `Li2015`, that is Li et al. (2015).
 
 ```julia
 model = LineByLineModel(lines, pf; profile=Voigt(), wing_cutoff=40.0)
