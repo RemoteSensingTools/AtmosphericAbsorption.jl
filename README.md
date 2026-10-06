@@ -13,17 +13,26 @@ radiative transfer — a standalone successor to vSmartMOM's `Absorption` module
 
 ## Status
 
-Early development, built in phases:
+Implemented:
 
-- **Phase 0 ✓** — line-shape math + core abstractions: `Architectures`, `Constants`
-  (TOML-defined), `LineShapes` (complex probability function + Doppler/Lorentz/Voigt),
-  `PartitionFunctions`.
-- **Phase 1 ✓** — HITRAN Voigt parity + GPU: columnar `LineDatabase`, the Port
-  interface, the `HitranPort` (.par parser + TIPS-2017), the unified KernelAbstractions
-  compute core, and CUDA/Metal extensions. Validated to <5×10⁻³ of HAPI on real CO2/H2O;
-  ~10× faster than HAPI on CPU and ~1900× on an A100 GPU (see [benchmark/](benchmark/)).
-- Phase 2 — advanced shapes (HT/SDV); Phase 3 — ExoMol; Phase 4 — line mixing +
-  continuum; Phase 5 — vSmartMOM integration.
+- **Core** — `Architectures`, TOML-defined `Constants`, columnar `LineDatabase`, the Port
+  interface, and one KernelAbstractions compute core with CUDA/Metal extensions.
+- **HITRAN** — `.par` parser and direct download (`HitranPort`, `load_hitran`), authenticated
+  non-Voigt parameters (`load_hitran_nonvoigt`), and tabulated `.xsc` cross-sections. Voigt
+  validated to <5×10⁻³ of HAPI on real CO2/H2O; ~10× faster than HAPI on CPU and ~1900× on an
+  A100 GPU (see [benchmark/](benchmark/)).
+- **ExoMol** — `ExoMolPort`, with line strengths derived from Einstein-A coefficients and the
+  ExoMol partition function.
+- **Line shapes** — Doppler, Lorentz, Voigt, speed-dependent Voigt, Rautian and Hartmann-Tran
+  (HAPI's `pcqsdhc`, matched to ~1e-6), plus first-order (Rosenkranz) line mixing.
+- **Partition functions** — TIPS-2021 (default), TIPS-2017, and tabulated ExoMol `.pf`.
+- **Continuum** — MT_CKD water-vapor continuum and HITRAN CIA.
+- **Lookup tables** — interpolated cross-section models, AER ABSCO tables (including GPU-native
+  OCO-2 LUTs), and batched profile queries (`compute_cross_section_profile`).
+- **vSmartMOM** — vSmartMOM.jl builds its absorption models with this package; its legacy
+  `Absorption` module has not been retired yet.
+
+See the [documentation](docs/src/index.md) for details.
 
 ## HITRAN API key (for non-Voigt parameters)
 
