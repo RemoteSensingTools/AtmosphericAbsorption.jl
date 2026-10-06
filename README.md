@@ -36,6 +36,33 @@ authenticated HITRANonline API and requires your own key from your profile at
 activate_hitran!("your-key")          # or set the HITRAN_API_KEY environment variable
 ```
 
+## Citing HITRAN
+
+Line data come from the [HITRAN database](https://hitran.org). If you publish results computed
+with HITRAN data through this package, **please cite the HITRAN edition you used**. Direct
+downloads from hitran.org always return the current edition (HITRAN2024 at the time of writing).
+The `edition` keyword is only a cache/provenance label. For local `.par` files, cite the edition
+the file came from.
+
+- **HITRAN2024:** Gordon IE, Rothman LS, Hargreaves RJ, et al. The HITRAN2024 molecular
+  spectroscopic database. *J Quant Spectrosc Radiat Transf* 2026;353:109807.
+  <https://doi.org/10.1016/j.jqsrt.2026.109807>
+- **HITRAN2020:** Gordon IE, Rothman LS, Hargreaves RJ, et al. The HITRAN2020 molecular
+  spectroscopic database. *J Quant Spectrosc Radiat Transf* 2022;277:107949.
+  <https://doi.org/10.1016/j.jqsrt.2021.107949>
+- **HITRAN2016:** Gordon IE, Rothman LS, Hill C, et al. The HITRAN2016 molecular spectroscopic
+  database. *J Quant Spectrosc Radiat Transf* 2017;203:3–69.
+  <https://doi.org/10.1016/j.jqsrt.2017.06.038>
+
+If you use the speed-dependent / Hartmann–Tran profiles (based on HAPI's `pcqsdhc`) or
+non-Voigt parameters from the HITRANonline API, please also cite **HAPI**:
+
+- Kochanov RV, Gordon IE, Rothman LS, Wcisło P, Hill C, Wilzewski JS. HITRAN Application
+  Programming Interface (HAPI): A comprehensive approach to working with spectroscopic data.
+  *J Quant Spectrosc Radiat Transf* 2016;177:15–30. <https://doi.org/10.1016/j.jqsrt.2016.03.005>
+
+The full author lists are in [docs/src/citing.md](docs/src/citing.md).
+
 ## Develop
 
 ```julia

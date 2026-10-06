@@ -75,3 +75,9 @@ Julia 1.10+. GPU support loads automatically when `CUDA.jl` (NVIDIA) or `Metal.j
 
 This package is a clean-slate successor to the absorption module of
 [vSmartMOM.jl](https://github.com/RemoteSensingTools/vSmartMOM.jl).
+
+## Citing HITRAN
+
+Line data come from the [HITRAN database](https://hitran.org). If you publish results computed
+with HITRAN data through this package, please cite the HITRAN edition you used (HITRAN2024 for
+current downloads) and, where applicable, HAPI. See [Citing](citing.md) for the references.

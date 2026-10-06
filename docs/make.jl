@@ -333,6 +333,7 @@ makedocs(;
         "Benchmarks" => "benchmarks.md",
         "Examples" => "examples.md",
         "API" => "api.md",
+        "Citing" => "citing.md",
     ],
 )
 

@@ -63,7 +63,7 @@ lines = load_lines(port; mol=:CO2, iso=:main, ν_min=6300, ν_max=6400, min_stre
 
 ## 2. HITRAN direct download
 
-To fetch lines straight from hitran.org, make a remote `HitranPort(; edition)` handle and ask `load_lines` for a molecule + band — it downloads that window once into the scratch cache (with a `.meta.toml` alongside) and reuses it thereafter (`force=true` re-downloads). The handle carries no molecule or band, so define it once and reuse it across as many species as you like. This endpoint is public and needs no API key.
+To fetch lines straight from hitran.org, make a remote `HitranPort(; edition)` handle and ask `load_lines` for a molecule + band — it downloads that window once into the scratch cache (with a `.meta.toml` alongside) and reuses it thereafter (`force=true` re-downloads). The handle carries no molecule or band, so define it once and reuse it across as many species as you like. This endpoint is public and needs no API key. hitran.org serves only the **current** HITRAN edition (HITRAN2024 at the time of writing); `edition` names the cache directory and is recorded as provenance, but it does not request an older edition. To use an older edition, load a local `.par` file with section 1. Please [cite](citing.md) the HITRAN edition you used.
 
 ```julia
 using AtmosphericAbsorption
@@ -193,3 +193,5 @@ linear interpolation, Float32 CPU/GPU parity, temperature leave-one-out transmis
 ## Provenance and reproducibility
 
 Every cached artifact carries a `.meta.toml` sidecar recording its source, molecule/isotopologue, spectral window, and edition or line-list version. This lets you confirm — months later, or on another machine — exactly which spectroscopic data underlies a cross-section, and is the recommended way to track data versions in reproducible workflows. Query it at runtime with `source_metadata(port, mol, iso)`.
+
+It also tells you which HITRAN edition to cite: please cite the edition behind your results. See [Citing](citing.md) for the references.
